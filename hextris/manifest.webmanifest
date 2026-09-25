@@ -5,7 +5,7 @@
 	"start_url": "./",
 	"display": "standalone",
 	"background_color": "#ecf0f1",
-	"description": "An addictive puzzle game inspired by Tetris.",
+	"description": "一款灵感来自俄罗斯方块的上瘾六边形消除小游戏。",
 	"icons": [{
         "src": "images/icons/transparent-192.png",
         "sizes": "192x192",

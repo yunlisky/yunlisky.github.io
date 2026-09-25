@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang='en'>
 	<head>
-		<title>Hextris</title>
-		<meta name="description" content="An addictive puzzle game inspired by Tetris.">
+		<meta charset="utf-8">
+		<title>Hextris · 六边形消除</title>
+		<meta name="description" content="一款灵感来自俄罗斯方块的上瘾六边形消除小游戏。">
 		<link rel="manifest" href="manifest.webmanifest">
 		<meta name="apple-mobile-web-app-title" content="Hextris">
 		<meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,7 +23,7 @@
 		<script type='text/javascript' src="vendor/keypress.min.js"></script>
 		<script type='text/javascript' src="vendor/jquery.js"></script>
 		<script type='text/javascript' src="js/save-state.js"></script>
-		<script type='text/javascript' src="js/view.js"></script>
+		<script type='text/javascript' charset="utf-8" src="js/view.js"></script>
 		<script type='text/javascript' src="js/wavegen.js"></script>
 		<script type='text/javascript' src="js/math.js"></script>
 		<script type='text/javascript' src="js/Block.js"></script>
@@ -33,7 +34,7 @@
 		<script type='text/javascript' src='js/update.js'></script>
 		<script type='text/javascript' src='js/render.js'></script>
 		<script type='text/javascript' src="js/input.js"></script>
-		<script type='text/javascript' src="js/main.js"></script>
+		<script type='text/javascript' charset="utf-8" src="js/main.js"></script>
 		<script type='text/javascript' src="js/initialization.js"></script>
 		<script src="vendor/sweet-alert.min.js"></script>
 	</head>
@@ -48,15 +49,15 @@
 		<div class="faded overlay"></div>
 		<img id="pauseBtn" src="./images/btn_pause.svg"/>
 		<img id='restartBtn' src="./images/btn_restart.svg"/>
-		<div id='HIGHSCORE'>HIGH SCORE</div>
+		<div id='HIGHSCORE'>最高分</div>
 		<div id='highScoreInGameText'>
-			<div id='highScoreInGameTextHeader'>HIGH SCORE</div><div id='currentHighScore'>10292</div>
+			<div id='highScoreInGameTextHeader'>最高分</div><div id='currentHighScore'>10292</div>
 		</div>
 		<div id="gameoverscreen">
 			<div id='container'>
-				<div id='gameOverBox' class='GOTitle'>GAME OVER</div>
+				<div id='gameOverBox' class='GOTitle'>游戏结束</div>
 				<div id='cScore'>1843</div>
-				<div id='highScoresTitle' class='GOTitle'>HIGH SCORES</div>
+				<div id='highScoresTitle' class='GOTitle'>历史最高</div>
 				<div class='score'><span class='scoreNum'>1.</span> <div id="1place" style="display:inline;">0</div></div>
 				<div class='score'><span class='scoreNum'>2.</span> <div id="2place" style="display:inline;">0</div></div>
 				<div class='score'><span class='scoreNum'>3.</span> <div id="3place" style="display:inline;">0</div></div>

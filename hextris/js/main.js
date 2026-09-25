@@ -362,7 +362,7 @@ function showHelp() {
 		}
 	}
 
-	$("#inst_main_body").html("<div id = 'instructions_head'>HOW TO PLAY</div><p>The goal of Hextris is to stop blocks from leaving the inside of the outer gray hexagon.</p><p>" + (settings.platform != 'mobile' ? 'Press the right and left arrow keys' : 'Tap the left and right sides of the screen') + " to rotate the Hexagon." + (settings.platform != 'mobile' ? ' Press the down arrow to speed up the block falling': '') + " </p><p>Clear blocks and get points by making 3 or more blocks of the same color touch.</p><p>Time left before your combo streak disappears is indicated by <span style='color:#f1c40f;'>the</span> <span style='color:#e74c3c'>colored</span> <span style='color:#3498db'>lines</span> <span style='color:#2ecc71'>on</span> the outer hexagon</p>");
+	$("#inst_main_body").html("<div id = 'instructions_head'>游戏玩法</div><p>游戏目标：不要让方块飞出外面的灰色六边形。</p><p>" + (settings.platform != 'mobile' ? '按键盘 ← → 方向键旋转六边形，按 ↓ 键加速下落' : '点击屏幕左右两侧旋转六边形') + "。</p><p>让 3 个或以上相同颜色的方块连在一起即可消除得分。</p><p>连击消失前的剩余时间，由外六边形上 <span style='color:#f1c40f;'>彩</span> <span style='color:#e74c3c'>色</span> <span style='color:#3498db'>线</span> <span style='color:#2ecc71'>条</span> 的长短表示</p>");
 	if (gameState == 1) {
 		pause();
 	}
