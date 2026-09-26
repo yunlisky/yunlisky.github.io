@@ -1,74 +1,359 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 
 <head>
-    <title>刺杀安倍晋三</title>
-    <meta itemprop="name" content="刺杀安倍晋三" />
-    <meta itemprop="description" content="刺杀安倍晋三" />
-    <meta charset="utf-8" />
-    <meta name="viewport" content="initial-scale=1, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0, width=device-width,target-densitydpi=device-dpi" />
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <link href="./static/index.css" rel="stylesheet" type="text/css">
-    <script src="https://pv.sohu.com/cityjson?ie=utf-8"></script>
-    <script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
-    <script src="https://passport.cnblogs.com/scripts/jsencrypt.min.js"></script>
-    <script src="./static/index.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>yunlisky · 小游戏合集</title>
+  <meta name="description" content="yunlisky 的小游戏合集：像素推理、像素叙事、街机。纯离线，可安装到手机主屏。">
+  <meta name="theme-color" content="#0d0b14">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230d0b14'/%3E%3Crect x='3' y='3' width='4' height='4' fill='%23fee761'/%3E%3Crect x='9' y='3' width='4' height='4' fill='%232ce8f5'/%3E%3Crect x='3' y='9' width='4' height='4' fill='%23e43b44'/%3E%3Crect x='9' y='9' width='4' height='4' fill='%2363c74d'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --ink: #0d0b14;
+      --deep: #131024;
+      --surface: #181425;
+      --line: #2b2440;
+      --text: #c0cbdc;
+      --muted: #8b9bb4;
+      --dim: #5a6988;
+      --gold: #fee761;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { -webkit-text-size-adjust: 100%; }
+
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      background: var(--ink);
+      color: var(--text);
+      font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      /* 背景点阵，呼应像素风 */
+      background-image:
+        radial-gradient(circle at 50% 0%, rgba(254, 231, 97, .07), transparent 55%),
+        linear-gradient(rgba(255, 255, 255, .022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .022) 1px, transparent 1px);
+      background-size: 100% 100%, 24px 24px, 24px 24px;
+    }
+
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: clamp(28px, 6vw, 64px) clamp(16px, 5vw, 32px) 40px;
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+    }
+
+    /* ---------- 页头 ---------- */
+    header { margin-bottom: clamp(24px, 5vw, 44px); }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .pixel {
+      display: grid;
+      grid-template-columns: repeat(2, 8px);
+      grid-template-rows: repeat(2, 8px);
+      gap: 2px;
+      flex: none;
+    }
+
+    .pixel i { display: block; }
+    .pixel i:nth-child(1) { background: var(--gold); }
+    .pixel i:nth-child(2) { background: #2ce8f5; }
+    .pixel i:nth-child(3) { background: #e43b44; }
+    .pixel i:nth-child(4) { background: #63c74d; }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 6vw, 38px);
+      letter-spacing: -.5px;
+      color: #fff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .lead {
+      margin: 0 0 6px;
+      font-size: clamp(15px, 3.6vw, 17px);
+      color: var(--text);
+    }
+
+    .meta {
+      margin: 0;
+      font-size: 13px;
+      color: var(--dim);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    /* ---------- 卡片网格 ---------- */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 268px), 1fr));
+      gap: clamp(14px, 3vw, 20px);
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .card:hover,
+    .card:focus-visible {
+      transform: translateY(-4px);
+      border-color: var(--c);
+      box-shadow: 0 0 0 1px var(--c), 0 16px 34px -16px var(--c);
+      outline: none;
+    }
+
+    .card:active { transform: translateY(-1px); }
+
+    .cover {
+      position: relative;
+      aspect-ratio: 8 / 5;
+      background: var(--deep);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .cover svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 10px;
+      letter-spacing: .08em;
+      padding: 3px 7px;
+      border-radius: 5px;
+      color: var(--gold);
+      background: rgba(13, 11, 20, .78);
+      border: 1px solid rgba(254, 231, 97, .35);
+    }
+
+    .body {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 14px 16px 16px;
+      flex: 1;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #fff;
+      letter-spacing: -.2px;
+    }
+
+    .kind {
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: .1em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--c);
+    }
+
+    .desc {
+      margin: 2px 0 0;
+      font-size: 13.5px;
+      color: var(--muted);
+      flex: 1;
+    }
+
+    .go {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--dim);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      transition: color .18s ease, transform .18s ease;
+    }
+
+    .card:hover .go,
+    .card:focus-visible .go {
+      color: var(--c);
+      transform: translateX(3px);
+    }
+
+    /* ---------- 页脚 ---------- */
+    footer {
+      margin-top: clamp(32px, 6vw, 56px);
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      font-size: 12.5px;
+      color: var(--dim);
+    }
+
+    footer p { margin: 0 0 6px; }
+
+    footer a {
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 1px solid var(--line);
+    }
+
+    footer a:hover { color: var(--gold); border-color: var(--gold); }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
 </head>
 
-<body onLoad="init()" oncontextmenu=self.event.returnValue=false>
-    <div id="GameScoreLayer" class="BBOX SHADE bgc1" style="display:none;">
-        <div style="padding:5%;margin-top: 200px;background-color: rgba(125, 181, 216, 0.3);">
-            <div id="GameScoreLayer-text"></div>
-            <div id="GameScoreLayer-score" style="margin:10px 0;">得分</div>
-            <div id="GameScoreLayer-bast">最佳</div>
-            <button type="button" class="btn btn-secondary btn-lg" onclick="replayBtn()">重来</button>
-            <button type="button" class="btn btn-secondary btn-lg" onclick="window.location.href='https://github.com/arcxingye/EatKano'">开源</button>
-            <button type="button" class="btn btn-secondary btn-lg" onclick="window.location.href='https://github.com/fangkuai767/EatKun'">开源（改）</button>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <span class="pixel" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <h1>yunlisky</h1>
+      </div>
+      <p class="lead">自己写的一些小游戏。全部纯离线，不联网也能玩。</p>
+      <p class="meta">4 款 · 无需登录 · 不收集数据 · 支持装到手机主屏</p>
+    </header>
+
+    <main class="grid">
+
+      <a class="card" href="./rokkenjima/" style="--c:#e43b44">
+        <div class="cover">
+          <span class="badge">可离线安装</span>
+          <svg viewBox="0 0 160 100" preserveAspectRatio="xMidYMid slice" role="img" aria-label="六轩岛密室封面">
+            <rect width="160" height="100" fill="#150f26" />
+            <circle cx="126" cy="26" r="13" fill="#fee761" />
+            <circle cx="120" cy="21" r="13" fill="#150f26" />
+            <rect x="30" y="56" width="100" height="36" fill="#241a40" />
+            <rect x="70" y="34" width="30" height="22" fill="#2f2352" />
+            <rect x="30" y="48" width="28" height="8" fill="#2f2352" />
+            <rect x="102" y="42" width="28" height="14" fill="#2f2352" />
+            <rect x="80" y="50" width="10" height="12" fill="#f77622" />
+            <rect x="40" y="66" width="9" height="12" fill="#feae34" />
+            <rect x="112" y="66" width="9" height="12" fill="#feae34" />
+            <rect x="66" y="72" width="8" height="20" fill="#150f26" />
+            <rect y="92" width="160" height="8" fill="#0d0b14" />
+          </svg>
         </div>
-    </div>
-    </div>
-    <div id="welcome" class="SHADE BOX-M">
-        <div class="welcome-bg FILL"></div>
-        <div class="FILL BOX-M" style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:5;">
-            <div style="margin:0 8% 0 9%;">
-                <div style="font-size:2.6em; color:#FEF002;">刺杀安倍晋三！</div><br />
-                <div style="font-size:2.2em; color:#fff; line-height:1.5em;">
-                    从最底下安倍晋三开始<br />
-                    看看你20秒能多少分<br />
-                    手机端可能会出现贴图消失<br />
-                    属正常现象，等待一下即可<br />
-                </div>
-                <br />
-                <div id="btn_group" style="display: block;">
-                    <button type="button" id="ready-btn" class="btn btn-primary loading btn-lg">开始刺杀安倍晋三</button>
-                    <br /><br />
-                    <button type="button" class="btn btn-secondary btn-lg" onclick="show_setting()">杀手按键自定义</button>
-                </div>
-                <div id="setting" style="display: none;">
-                    <!-- 此为无排行榜版本，去除名字留言 -->
-                    <div class="input-group mb-3" style="display: none;">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text" id="basic-addon1">名字</span>
-                        </div>
-                        <input type="text" id="username" class="form-control" maxlength=8 placeholder="用于纪录排行(特殊字符会被过滤)">
-                    </div>
-                    <div class="input-group mb-3" style="display: none;">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text" id="basic-addon1">留言</span>
-                        </div>
-                        <input type="text" id="message" class="form-control" maxlength=50 placeholder="禁广告/脏话(本项可不填)">
-                    </div>
-                    <div class="input-group mb-3">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text" id="basic-addon1">按键</span>
-                        </div>
-                        <input type="text" id="keyboard" class="form-control" maxlength=4 placeholder="默认为1234">
-                    </div>
-                    <button type="button" class="btn btn-secondary btn-lg" onclick="show_btn();save_cookie();">完成</button>
-                </div>
-            </div>
+        <div class="body">
+          <div class="title-row">
+            <h2>六轩岛密室</h2>
+          </div>
+          <p class="kind">像素推理</p>
+          <p class="desc">17 位来客、8 个夜晚、连续密室。读案卷、解七道推理锁，指名真凶——说错会被红字驳回。零失误通调用 S 评价。</p>
+          <span class="go">进入游戏 →</span>
         </div>
-    </div>
+      </a>
+
+      <a class="card" href="./echo-station/" style="--c:#2ce8f5">
+        <div class="cover">
+          <span class="badge">可离线安装</span>
+          <svg viewBox="0 0 160 100" preserveAspectRatio="xMidYMid slice" role="img" aria-label="回声车站封面">
+            <rect width="160" height="100" fill="#0f1728" />
+            <rect x="20" y="14" width="3" height="3" fill="#8b9bb4" />
+            <rect x="44" y="30" width="2" height="2" fill="#c0cbdc" />
+            <rect x="132" y="20" width="3" height="3" fill="#8b9bb4" />
+            <rect x="112" y="44" width="2" height="2" fill="#c0cbdc" />
+            <rect x="28" y="58" width="2" height="2" fill="#c0cbdc" />
+            <rect x="146" y="66" width="2" height="2" fill="#8b9bb4" />
+            <rect x="76" y="16" width="8" height="34" fill="#2a3450" />
+            <rect x="78" y="20" width="4" height="6" fill="#e43b44" />
+            <rect x="78" y="29" width="4" height="6" fill="#3a4466" />
+            <rect x="78" y="38" width="4" height="6" fill="#3a4466" />
+            <rect x="79" y="50" width="2" height="34" fill="#3a4466" />
+            <rect x="14" y="84" width="132" height="4" fill="#2a3450" />
+            <rect x="38" y="76" width="4" height="24" fill="#5a6988" />
+            <rect x="118" y="76" width="4" height="24" fill="#5a6988" />
+            <rect y="94" width="160" height="6" fill="#0d0b14" />
+          </svg>
+        </div>
+        <div class="body">
+          <div class="title-row">
+            <h2>回声车站</h2>
+          </div>
+          <p class="kind">像素叙事</p>
+          <p class="desc">1987 年冬，废弃铁路 K-17 信号站。你认得这面霜——同一个位置，同一块形状。6 种结局。</p>
+          <span class="go">进入游戏 →</span>
+        </div>
+      </a>
+
+      <a class="card" href="./hextris/" style="--c:#feae34">
+        <div class="cover">
+          <svg viewBox="0 0 160 100" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Hextris 封面">
+            <rect width="160" height="100" fill="#1a1a2c" />
+            <polygon points="80,14 112,32 112,68 80,86 48,68 48,32" fill="none" stroke="#3a4466" stroke-width="5" />
+            <rect x="62" y="60" width="15" height="15" fill="#e43b44" />
+            <rect x="77" y="60" width="15" height="15" fill="#2ce8f5" />
+            <rect x="77" y="45" width="15" height="15" fill="#63c74d" />
+            <rect x="19" y="45" width="6" height="6" fill="#3a4466" />
+            <rect x="135" y="45" width="6" height="6" fill="#3a4466" />
+          </svg>
+        </div>
+        <div class="body">
+          <div class="title-row">
+            <h2>Hextris</h2>
+          </div>
+          <p class="kind">街机 · 汉化</p>
+          <p class="desc">六边形俄罗斯方块：转动圆环，让同色方块连成一线消掉。已汉化并适配手机触控与横屏。</p>
+          <span class="go">进入游戏 →</span>
+        </div>
+      </a>
+
+      <a class="card" href="./anbeijinsan/" style="--c:#0099db">
+        <div class="cover">
+          <svg viewBox="0 0 160 100" preserveAspectRatio="xMidYMid slice" role="img" aria-label="点击小游戏封面">
+            <rect width="160" height="100" fill="#16202f" />
+            <circle cx="80" cy="50" r="36" fill="none" stroke="#2a3450" stroke-width="5" />
+            <circle cx="80" cy="50" r="23" fill="none" stroke="#3a4466" stroke-width="5" />
+            <circle cx="80" cy="50" r="9" fill="#e43b44" />
+            <rect x="78" y="4" width="4" height="26" fill="#5a6988" />
+            <rect x="78" y="70" width="4" height="26" fill="#5a6988" />
+            <rect x="4" y="48" width="26" height="4" fill="#5a6988" />
+            <rect x="130" y="48" width="26" height="4" fill="#5a6988" />
+          </svg>
+        </div>
+        <div class="body">
+          <div class="title-row">
+            <h2>刺杀安倍晋三</h2>
+          </div>
+          <p class="kind">休闲点击</p>
+          <p class="desc">从最底下开始点，看看 20 秒能拿多少分。改自经典小游戏，支持自定义按键。</p>
+          <span class="go">进入游戏 →</span>
+        </div>
+      </a>
+
+    </main>
+
+    <footer>
+      <p>本站内容仅供娱乐，无任何政治与商业目的。</p>
+      <p>
+        <a href="https://github.com/yunlisky">GitHub</a> ·
+        <a href="https://github.com/yunlisky/yunlisky.github.io">本站源码</a>
+      </p>
+    </footer>
+  </div>
 </body>
 
 </html>

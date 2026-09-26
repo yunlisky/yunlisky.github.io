@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>回声车站 · ECHO STATION</title>
+<meta name="description" content="1987 年冬，废弃铁路 K-17 信号站。像素风循环叙事游戏，6 个结局，可离线游玩。">
+<meta name="theme-color" content="#0d0b14">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="回声车站">
+<meta name="format-detection" content="telephone=no,email=no,address=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+  :root{
+    --ink:#0d0b14; --deep:#181425; --slate:#262b44; --panel:#3a4466;
+    --steel:#5a6988; --fog:#8b9bb4; --mist:#c0cbdc; --white:#ffffff;
+    --cyan:#2ce8f5; --blue:#0099db; --navy:#124e89;
+    --red:#e43b44; --amber:#feae34; --gold:#fee761; --green:#63c74d;
+    --rust:#be4a2f;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  html{background:var(--ink);}
+  body{
+    background:
+      radial-gradient(circle at 50% 0%, #1d1830 0%, var(--ink) 60%),
+      var(--ink);
+    color:var(--mist);
+    font-family:"Cascadia Mono","Consolas","Menlo","Courier New",ui-monospace,monospace;
+    display:flex; align-items:center; justify-content:center;
+    padding:14px;
+    overflow:hidden;
+    min-height:100dvh;
+    overscroll-behavior:none;          /* 关掉 iOS 整页橡皮筋 */
+    touch-action:manipulation;          /* 去掉双击缩放的 300ms 延迟 */
+    -webkit-user-select:none; -moz-user-select:none; user-select:none;
+    -webkit-touch-callout:none;         /* 长按不弹「拷贝/查询」菜单 */
+  }
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:99;
+    background:repeating-linear-gradient(to bottom, rgba(0,0,0,.16) 0 1px, transparent 1px 3px);
+    mix-blend-mode:multiply; opacity:.5;
+  }
+  #cab{
+    width:100%; max-width:820px; position:relative;
+    border:3px solid var(--panel);
+    background:var(--deep);
+    box-shadow:0 0 0 3px var(--ink), 0 0 42px rgba(44,232,245,.10), 0 18px 60px rgba(0,0,0,.7);
+    display:flex; flex-direction:column;
+    max-height:calc(100vh - 28px);
+    max-height:calc(100dvh - 28px);
+  }
+  #bar{
+    display:flex; align-items:center; gap:8px;
+    padding:6px 10px; background:var(--slate);
+    border-bottom:3px solid var(--ink); font-size:11px; letter-spacing:.14em;
+    color:var(--fog); flex:0 0 auto;
+  }
+  #bar b{color:var(--cyan); font-weight:600; letter-spacing:.22em;}
+  #bar .sp{flex:1}
+  .tag{
+    border:1px solid var(--steel); padding:1px 6px; color:var(--mist); font-size:10px;
+  }
+  .tag.hot{border-color:var(--red); color:var(--red);}
+  .btn{
+    cursor:pointer; border:1px solid var(--steel); background:transparent;
+    color:var(--fog); font:inherit; font-size:10px; padding:2px 7px; letter-spacing:.1em;
+  }
+  .btn:hover{border-color:var(--cyan); color:var(--cyan);}
+  #view{position:relative; background:#000; flex:0 0 auto; overflow:hidden;}
+  #cv{
+    display:block; width:100%; height:auto; image-rendering:pixelated;
+    image-rendering:crisp-edges; background:#000;
+  }
+  #glow{
+    position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 120%, rgba(44,232,245,.10), transparent 70%);
+  }
+  #box{
+    flex:1 1 auto; overflow-y:auto; overflow-x:hidden;
+    padding:14px 16px 16px; min-height:150px;
+    border-top:3px solid var(--panel); background:linear-gradient(180deg,#1b1730,#141122);
+    overscroll-behavior:contain;              /* 滚到底不再带动整页 */
+    -webkit-overflow-scrolling:touch;         /* iOS 惯性滚动 */
+    touch-action:pan-y;                       /* 纵向滚动交给浏览器，横向留给手势 */
+  }
+  #speaker{
+    font-size:11px; letter-spacing:.2em; color:var(--amber); margin-bottom:7px;
+    min-height:14px; text-transform:uppercase;
+  }
+  #text{font-size:14px; line-height:1.95; min-height:5.6em; white-space:pre-wrap; word-break:break-word;}
+  #text .d{color:var(--fog);}            /* 环境/旁白 */
+  #text .v{color:var(--cyan);}           /* 收音机里的声音 */
+  #text .em{color:var(--gold);}
+  #text em{font-style:normal; color:var(--gold);}
+  #ell{display:inline-block; width:.62em; height:.95em; background:var(--cyan);
+       vertical-align:-2px; animation:bl .55s steps(1,end) infinite; margin-left:2px;}
+  @keyframes bl{50%{opacity:0}}
+  #choices{margin-top:12px; display:flex; flex-direction:column; gap:6px;}
+  .ch{
+    text-align:left; cursor:pointer; font:inherit; font-size:13.5px;
+    background:#00000033; border:1px solid var(--slate); border-left:4px solid var(--steel);
+    color:var(--mist); padding:8px 11px; line-height:1.5;
+    transition:background .1s, border-color .1s, transform .06s;
+  }
+  .ch:hover{background:rgba(44,232,245,.09); border-left-color:var(--cyan); color:var(--white);}
+  .ch:active{transform:translateX(2px);}
+  .ch .n{color:var(--steel); margin-right:8px;}
+  .ch:hover .n{color:var(--cyan);}
+  .ch .lk{color:var(--red); font-size:11px; margin-left:6px;}
+  #hint{font-size:10px; color:#4d5673; letter-spacing:.12em; margin-top:10px; text-align:right;}
+  /* menu */
+  #menu{
+    position:absolute; inset:0; background:linear-gradient(180deg,rgba(13,11,20,.96),rgba(13,11,20,.99));
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; z-index:20;
+  }
+  #menu h1{
+    /* text-indent 抵消末字后多出的字距，中文标题才能真的居中 */
+    font-size:clamp(26px,7vw,44px); letter-spacing:.36em; text-indent:.36em;
+    margin:0 0 2px;
+    color:var(--cyan); text-shadow:3px 3px 0 var(--navy), 6px 6px 0 #00000088;
+  }
+  #menu .sub{font-size:10px; letter-spacing:.42em; color:var(--steel); margin-bottom:16px;}
+  #menu .btn2{
+    width:min(280px,74vw); padding:10px; font:inherit; font-size:12px; letter-spacing:.24em;
+    background:#00000044; border:1px solid var(--panel); color:var(--fog); cursor:pointer;
+  }
+  #menu .btn2:hover{border-color:var(--cyan); color:var(--cyan); background:rgba(44,232,245,.08);}
+  #menu .btn2[disabled]{opacity:.32; cursor:default;}
+  #menu .ver{position:absolute; bottom:10px; font-size:9.5px; color:#3f4763; letter-spacing:.16em;}
+  #panel{
+    position:absolute; inset:0; z-index:30; background:rgba(9,8,15,.97);
+    padding:20px; overflow-y:auto; display:none;
+    overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+    -webkit-user-select:text; user-select:text;   /* 结局图鉴允许选中复制 */
+  }
+  #panel h2{font-size:13px; letter-spacing:.24em; color:var(--amber); margin:0 0 14px;}
+  .endrow{border-left:3px solid var(--panel); padding:9px 12px; margin-bottom:9px; background:#00000033;}
+  .endrow .t{color:var(--mist); font-size:13px; letter-spacing:.1em;}
+  .endrow .d{color:var(--fog); font-size:11.5px; margin-top:4px; line-height:1.7;}
+  .endrow.got{border-left-color:var(--green);}
+  .endrow.got .t{color:var(--gold);}
+  #fx{
+    position:absolute; inset:0; pointer-events:none; z-index:15; opacity:0;
+    background:var(--white);
+  }
+  #fx.on{animation:flash .5s ease-out;}
+  @keyframes flash{0%{opacity:.85}100%{opacity:0}}
+  #card{
+    position:absolute; inset:0; display:none; z-index:18; pointer-events:none;
+    align-items:center; justify-content:center; background:rgba(13,11,20,.88);
+  }
+  #card.on{display:flex; animation:card 1.9s ease forwards;}
+  #card span{
+    font-size:clamp(15px,4.2vw,24px); letter-spacing:.32em; color:var(--gold);
+    text-shadow:2px 2px 0 var(--navy), 4px 4px 0 #00000088;
+    border-top:1px solid var(--panel); border-bottom:1px solid var(--panel);
+    padding:11px 20px 11px 24px; text-align:center;
+    /* 窄屏上长章节名宁可折行，也不要被容器裁掉半个字 */
+    max-width:calc(100% - 28px); box-sizing:border-box;
+  }
+  @keyframes card{0%{opacity:0}14%{opacity:1}76%{opacity:1}100%{opacity:0}}
+  /* ============ 手机 · 竖屏 ============ */
+  @media (max-width:560px){
+    body{padding:0;}
+    #cab{
+      height:100vh; height:100dvh;
+      max-height:100vh; max-height:100dvh;
+      border-left:0; border-right:0; border-top:0;
+      /* 安卓外壳会算好刘海高度注入 --sai-*，WebView 报不出值时兜底 */
+      padding-top:max(env(safe-area-inset-top), var(--sai-top, 0px));
+      padding-left:max(env(safe-area-inset-left), var(--sai-left, 0px));
+      padding-right:max(env(safe-area-inset-right), var(--sai-right, 0px));
+    }
+    /* 手机宽度不够：英文站名会把右侧的「声音 / 菜单」挤出屏幕，直接让位 */
+    #bar{padding:8px 10px; gap:7px; font-size:10px; letter-spacing:.06em;}
+    #bar b{display:none;}
+    #bar .tag{font-size:10px; padding:2px 7px; letter-spacing:.08em;}
+    #bar .btn{padding:5px 8px; font-size:10.5px; letter-spacing:.04em;}
+    #view{display:flex; align-items:center; justify-content:center;}
+    #cv{
+      width:100%; height:auto;
+      width:min(100%, calc(38vh * 16 / 9));
+      width:min(100%, calc(38dvh * 16 / 9));
+    }
+    #box{padding:14px 15px calc(18px + max(env(safe-area-inset-bottom), var(--sai-bottom, 0px)));}
+    #text{font-size:16px; line-height:1.85; min-height:4.6em;}
+    #speaker{font-size:11.5px; margin-bottom:8px;}
+    #choices{gap:9px; margin-top:14px;}
+    .ch{font-size:15px; padding:13px 14px; min-height:48px; border-left-width:5px;}
+    .ch .n{margin-right:9px;}
+    #hint{font-size:10.5px; margin-top:14px;}
+    #menu{gap:11px; padding:20px;}
+    #menu h1{font-size:clamp(28px,9vw,40px);}
+    #menu .btn2{width:min(320px,82vw); padding:15px; font-size:13px; min-height:52px;}
+    #menu .ver{bottom:calc(12px + max(env(safe-area-inset-bottom), var(--sai-bottom, 0px)));}
+    #panel{padding:18px 16px calc(24px + max(env(safe-area-inset-bottom), var(--sai-bottom, 0px)));}
+    #panel .btn{padding:9px 14px; font-size:12px;}
+    #card span{font-size:clamp(16px,5vw,22px); letter-spacing:.24em; padding:12px 14px;}
+  }
+
+  /* ============ 手机 · 横屏（画面与文本左右分栏） ============ */
+  @media (orientation:landscape) and (max-height:600px){
+    body{padding:0;}
+    #cab{
+      width:100%; max-width:none;
+      height:100vh; height:100dvh;
+      max-height:none; border-width:0;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      grid-template-rows:auto 1fr;
+      grid-template-areas:"bar bar" "view box";
+      padding-left:max(env(safe-area-inset-left), var(--sai-left, 0px));
+      padding-right:max(env(safe-area-inset-right), var(--sai-right, 0px));
+    }
+    #bar{grid-area:bar;}
+    #view{
+      grid-area:view; display:flex; align-items:center; justify-content:center;
+      max-height:none;
+    }
+    #cv{width:100%; height:auto; max-height:100%; object-fit:contain;}
+    /* 章节标题卡默认贴在 #view 里，可横屏时 #view 只占左半边，
+       长章节名会被裁掉。改成铺满整个视口，跨两栏居中。 */
+    #card{position:fixed; inset:0;}
+    #box{
+      grid-area:box; border-top:0; border-left:3px solid var(--panel);
+      padding:12px 16px calc(12px + max(env(safe-area-inset-right), var(--sai-right, 0px)));
+    }
+    #text{font-size:15px; line-height:1.8; min-height:3.2em;}
+    .ch{font-size:14px; padding:10px 12px; min-height:42px;}
+    #choices{gap:6px; margin-top:10px;}
+    #menu{gap:8px;}
+    #menu h1{font-size:30px; letter-spacing:.3em;}
+    #menu .btn2{min-height:44px; padding:10px;}
+  }
+
+  /* ============ 触摸设备：干掉粘住的 hover 态，改用按下反馈 ============ */
+  @media (hover:none){
+    .ch:hover{background:#00000033; border-left-color:var(--steel); color:var(--mist);}
+    .ch:active{background:rgba(44,232,245,.14); border-left-color:var(--cyan); color:var(--white);}
+    #menu .btn2:hover{border-color:var(--panel); color:var(--fog); background:#00000044;}
+    #menu .btn2:active{border-color:var(--cyan); color:var(--cyan); background:rgba(44,232,245,.10);}
+    .btn:hover{border-color:var(--steel); color:var(--fog);}
+    .btn:active{border-color:var(--cyan); color:var(--cyan);}
+  }
+</style>
+</head>
+<body>
+<div id="cab">
+  <div id="bar">
+    <b>ECHO STATION</b>
+    <span class="tag" id="chTag">--</span>
+    <span class="sp"></span>
+    <span class="tag" id="loopTag">循环 00</span>
+    <button class="btn" id="bSnd">♪ 声音</button>
+    <button class="btn" id="bMenu">≡ 菜单</button>
+  </div>
+
+  <div id="view">
+    <canvas id="cv" width="192" height="108"></canvas>
+    <div id="glow"></div>
+    <div id="fx"></div>
+    <div id="card"><span id="cardTx"></span></div>
+  </div>
+
+  <div id="menu">
+    <h1>回声车站</h1>
+    <div class="sub">E C H O &nbsp; S T A T I O N</div>
+    <button class="btn2" id="mNew">新 的 一 次</button>
+    <button class="btn2" id="mCont">继 续 值 班</button>
+    <button class="btn2" id="mEnd">结 局 图 鉴</button>
+    <div class="ver">K-17 SIGNAL STATION · 1987 · BUILD 0.2 MOBILE</div>
+  </div>
+
+  <div id="panel">
+    <h2 id="pTitle">结局图鉴</h2>
+    <div id="pBody"></div>
+    <div style="margin-top:16px"><button class="btn" id="pClose">返回</button></div>
+  </div>
+
+  <div id="box">
+    <div id="speaker"></div>
+    <div id="text"></div>
+    <div id="choices"></div>
+    <div id="hint"></div>
+  </div>
+</div>
+
+<script src="story.js"></script>
+<script>
+"use strict";
+/* ============================================================
+   回声车站 · ECHO STATION
+   像素风叙事引擎  ——  单文件 / 零依赖 / 可打包 exe+apk
+   ============================================================ */
+
+/* ---------- 0. 工具 ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+
+/* ---------- 1. 调色板 (8-bit / Endesga 风) ---------- */
+const C={
+  ink:'#0d0b14', deep:'#181425', slate:'#262b44', pane:'#3a4466',
+  steel:'#5a6988', fog:'#8b9bb4', mist:'#c0cbdc', white:'#ffffff',
+  sand:'#ead4aa', amber:'#feae34', gold:'#fee761', orange:'#f77622',
+  rust:'#be4a2f', brown:'#c28569', red:'#e43b44', crimson:'#a22633',
+  rose:'#f6757a', cyan:'#2ce8f5', blue:'#0099db', navy:'#124e89',
+  green:'#63c74d', moss:'#3e8948', teal:'#193c3e', plum:'#68386c',
+  skin:'#e8b796', night:'#10162e'
+};
+
+/* ---------- 2. canvas ---------- */
+const VW=192, VH=108;
+const cv=document.getElementById('cv');
+const g=cv.getContext('2d');
+g.imageSmoothingEnabled=false;
+function r(x,y,w,h,c){ if(w<=0||h<=0) return; g.fillStyle=c; g.fillRect(x|0,y|0,Math.max(1,w|0),Math.max(1,h|0)); }
+function band(y0,y1,c0,c1){ /* 垂直渐变条带 */
+  const n=Math.max(1,(y1-y0)|0);
+  for(let i=0;i<n;i++){
+    const t=i/n;
+    g.fillStyle=mix(c0,c1,t); g.fillRect(0,(y0+i)|0,VW,1);
+  }
+}
+function hex2rgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function mix(a,b,t){
+  const A=hex2rgb(a),B=hex2rgb(b);
+  return 'rgb('+((A[0]+(B[0]-A[0])*t)|0)+','+((A[1]+(B[1]-A[1])*t)|0)+','+((A[2]+(B[2]-A[2])*t)|0)+')';
+}
+function stars(seed,count,maxY){
+  const rnd=mulberry32(seed);
+  for(let i=0;i<count;i++){
+    const x=(rnd()*VW)|0, y=(rnd()*maxY)|0;
+    r(x,y,1,1, rnd()>.86?C.mist:(rnd()>.6?C.fog:C.steel));
+  }
+}
+function snow(seed,count,t,speed,color){
+  const rnd=mulberry32(seed);
+  for(let i=0;i<count;i++){
+    const bx=rnd()*VW, by=rnd()*VH, sz=rnd()*2|0;
+    const y=(by + t*speed*(0.6+rnd()*0.8))%VH;
+    const x=(bx + Math.sin((y+t*0.02)*0.18+i)*2.4+VW)%VW;
+    r(x,y,1+sz,1+sz,color||C.mist);
+  }
+}
+function hills(yBase,color,amp,step,seed){
+  const rnd=mulberry32(seed);
+  g.fillStyle=color; g.beginPath(); g.moveTo(0,VH);
+  let y=yBase;
+  for(let x=0;x<=VW;x+=step){
+    y=yBase - (Math.sin(x*0.05)*amp) - rnd()*amp*0.5;
+    g.lineTo(x,y);
+  }
+  g.lineTo(VW,VH); g.closePath(); g.fill();
+}
+function rails(y,spread,color,sleeper){
+  for(let i=0;i<14;i++){
+    const yy=y+i*i*0.34, s=spread+i*0.9;
+    if(yy>VH) break;
+    r(VW/2-s, yy, 1.4, 1, color);
+    r(VW/2+s, yy, 1.4, 1, color);
+    if(sleeper && i%2===0) r(VW/2-s-1, yy, s*2+2, 1, sleeper);
+  }
+}
+function snowGround(y,color,top){
+  r(0,y,VW,VH-y,color);
+  const rnd=mulberry32(77);
+  for(let i=0;i<90;i++){ const x=(rnd()*VW)|0,yy=y+(rnd()*(VH-y))|0; r(x,yy,1,1,top); }
+}
+
+/* ---------- 3. 场景 ---------- */
+const SC={};
+
+/* 雪花噪点 */
+SC.static=function(t){
+  const rnd=mulberry32((t*0.09)|0);
+  r(0,0,VW,VH,C.ink);
+  for(let i=0;i<2600;i++){
+    const x=(rnd()*VW)|0,y=(rnd()*VH)|0,v=rnd();
+    r(x,y,1,1, v>.93?C.mist:(v>.75?C.fog:(v>.5?C.steel:C.slate)));
+  }
+  for(let i=0;i<7;i++){ if(rnd()>.82) r(0,(rnd()*VH)|0,VW,1,rnd()>.5?C.deep:C.mist); }
+};
+
+/* 虚空 */
+SC.void=function(t){
+  r(0,0,VW,VH,C.ink);
+  for(let i=0;i<5;i++){
+    const rr=((t*0.012 + i*17)%70);
+    g.strokeStyle=mix(C.ink,C.plum,clamp(1-rr/70,0,1)*0.5);
+    g.lineWidth=1; g.beginPath();
+    g.ellipse(VW/2,VH/2,rr*1.6,rr,0,0,Math.PI*2); g.stroke();
+  }
+};
+
+/* 站外 · 夜 */
+SC.station=function(t){
+  band(0,44,C.ink,C.slate);
+  stars(11,58,40);
+  hills(46,C.deep,4,4,5);
+  hills(52,C.night,3,3,9);
+  /* 地面 */
+  snowGround(66,C.deep,C.slate);
+  /* 铁轨 */
+  rails(70,4,C.steel,C.slate);
+  /* 信号塔 */
+  const bx=34;
+  r(bx,20,2,48,C.slate);
+  for(let y=22;y<68;y+=5){ r(bx-4,y,10,1,C.slate); }
+  r(bx-4,20,10,1,C.steel);
+  r(bx-5,14,12,6,C.deep);
+  const blink=(Math.sin(t*0.0035)>0);
+  if(blink){ r(bx-3,16,8,3,C.red); r(bx-2,15,6,1,C.rose); }
+  else { r(bx-2,17,6,1,C.crimson); }
+  /* 小屋 */
+  r(118,48,44,26,C.deep);
+  r(116,44,48,4,C.slate);
+  r(126,56,9,9,C.amber);
+  r(127,57,7,7,C.gold);
+  r(140,58,5,7,C.slate);
+  r(150,52,6,6,C.slate);
+  /* 雪 */
+  snow(3,70,t,0.05,C.mist);
+};
+
+/* 值班室 */
+SC.room=function(t){
+  band(0,60,C.slate,C.pane);
+  r(0,60,VW,VH-60,C.deep);
+  for(let y=60;y<VH;y+=4) r(0,y,VW,1,C.ink);
+  /* 窗 */
+  r(12,14,46,32,C.ink);
+  band(14,46,C.ink,C.night);
+  stars(21,16,28);
+  r(12,14,46,32,'rgba(0,0,0,0)');
+  g.strokeStyle=C.steel; g.lineWidth=1; g.strokeRect(12.5,14.5,45,31);
+  r(34,14,1,32,C.steel); r(12,30,46,1,C.steel);
+  /* 墙上海报 */
+  r(72,18,20,26,C.sand); r(73,19,18,24,C.brown);
+  r(75,22,14,3,C.rust); r(75,27,14,2,C.rust); r(75,31,10,2,C.rust);
+  r(96,20,16,22,C.mist); r(97,21,14,20,C.fog);
+  for(let i=0;i<5;i++) r(98,23+i*3,12,1,C.steel);
+  /* 桌 */
+  r(96,62,84,6,C.brown); r(100,68,76,22,C.rust);
+  r(0,84,VW,VH-84,C.ink);
+  /* 收音机 */
+  r(104,52,34,11,C.slate); r(105,53,32,9,C.deep);
+  r(107,55,12,5,C.teal);
+  const crt=(Math.sin(t*0.006)*0.5+0.5);
+  r(108,56,10,3,mix(C.moss,C.green,crt));
+  r(133,55,2,2,(Math.sin(t*0.004)>0)?C.red:C.crimson);
+  r(107,63,28,1,C.steel);
+  /* 台灯 */
+  r(150,44,2,8,C.steel); r(144,42,14,3,C.steel);
+  const l=(Math.sin(t*0.002)*0.12+0.88);
+  g.fillStyle='rgba(254,174,52,'+(0.10*l)+')';
+  g.beginPath(); g.moveTo(151,44); g.lineTo(118,84); g.lineTo(184,84); g.closePath(); g.fill();
+  /* 电话 */
+  r(20,58,14,10,C.slate); r(21,59,12,8,C.deep);
+  r(22,57,10,2,C.steel);
+};
+
+/* 值班表 */
+SC.roster=function(t){
+  band(0,VH,C.pane,C.slate);
+  for(let y=0;y<VH;y+=6) r(0,y,VW,1,'rgba(0,0,0,.10)');
+  r(44,10,104,88,C.sand);
+  r(45,11,102,86,C.mist);
+  r(52,18,60,4,C.steel);
+  for(let i=0;i<9;i++){
+    r(52,30+i*7,88,1,C.fog);
+    r(54,27+i*7,20,3,C.steel);
+    r(80,27+i*7,16,3,C.steel);
+  }
+  r(52,86,88,1,C.steel);
+  /* 被划掉的一行 */
+  g.strokeStyle=C.red; g.lineWidth=1; g.beginPath();
+  g.moveTo(52,89.5); g.lineTo(142,87.5); g.stroke();
+  /* 湿墨迹新行 */
+  const a=clamp(Math.sin(t*0.004)*0.5+0.75,0,1);
+  g.fillStyle='rgba(226,59,68,'+a+')';
+  g.fillRect(52,92,22,3);
+  g.fillRect(76,92,10,3);
+};
+
+/* 结霜的窗 / 窗外的人 */
+SC.frost=function(t){
+  band(0,VH,C.night,C.ink);
+  const rnd=mulberry32(41);
+  for(let i=0;i<1800;i++){
+    const x=(rnd()*VW)|0,y=(rnd()*VH)|0,v=rnd();
+    r(x,y,1,1, v>.9?C.pane:(v>.7?C.slate:C.deep));
+  }
+  /* 擦开的一块 */
+  g.fillStyle='rgba(0,0,0,0)';
+  const cx=112,cy=54;
+  g.save(); g.beginPath(); g.ellipse(cx,cy,30,26,0,0,Math.PI*2); g.clip();
+  band(0,VH,C.ink,C.night); stars(31,26,60);
+  /* 人影 */
+  const sway=Math.sin(t*0.0011)*1.2;
+  r(cx-9+sway,cy+2,18,30,C.ink);
+  r(cx-6+sway,cy-10,12,14,C.ink);
+  r(cx-5+sway,cy-9,10,5,C.deep);
+  r(cx-4+sway,cy-6,8,4,'#000000');
+  g.restore();
+  g.strokeStyle=C.mist; g.lineWidth=1;
+  g.beginPath(); g.ellipse(cx,cy,30,26,0,0,Math.PI*2); g.stroke();
+  snow(6,40,t,0.04,C.mist);
+};
+
+/* 发报机 */
+SC.telegraph=function(t){
+  band(0,64,C.slate,C.deep); r(0,64,VW,VH-64,C.rust);
+  for(let y=64;y<VH;y+=5) r(0,y,VW,1,'rgba(0,0,0,.16)');
+  /* 机身 */
+  r(40,46,112,40,C.steel); r(42,48,108,36,C.slate);
+  /* 键 */
+  r(62,66,40,6,C.fog); r(66,72,8,10,C.pane); r(64,80,44,4,C.steel);
+  const press=(Math.sin(t*0.012)>0.6);
+  if(press) r(64,82,36,3,C.cyan);
+  /* 铭牌 */
+  r(112,54,32,12,C.deep); 
+  for(let i=0;i<3;i++) r(115,57+i*3,26,1,C.moss);
+  /* 导线 */
+  g.strokeStyle=C.ink; g.lineWidth=1; g.beginPath();
+  g.moveTo(152,60); g.bezierCurveTo(176,54,178,72,192,64); g.stroke();
+  /* 氛围灯 */
+  r(46,52,4,4,(Math.sin(t*0.005)>0)?C.gold:C.amber);
+};
+
+/* 磁带机 */
+SC.tape=function(t){
+  band(0,VH,C.ink,C.slate);
+  r(28,26,136,62,'#111018'); r(30,28,132,58,C.steel); r(32,30,128,54,C.slate);
+  /* 磁带窗 */
+  r(44,38,68,34,C.deep);
+  const a=t*0.006;
+  [[58,55,11],[98,55,11]].forEach(function(p,i){
+    r(p[0]-11,p[1]-11,22,22,C.ink);
+    r(p[0]-9,p[1]-9,18,18,C.slate);
+    for(let k=0;k<6;k++){
+      const ang=a*(i?-1:1)+k*Math.PI/3;
+      r(p[0]+Math.cos(ang)*7-1,p[1]+Math.sin(ang)*7-1,2,1,C.fog);
+    }
+    r(p[0]-3,p[1]-3,6,6,C.fog);
+  });
+  /* 电平表 */
+  r(122,38,32,20,C.deep);
+  const lv=(Math.sin(t*0.009)*0.5+0.5);
+  for(let i=0;i<9;i++){
+    const on=i/9<lv;
+    const hgt=3+i*1.7;
+    r(125+i*3, 52-hgt, 2, hgt, on?(i>6?C.red:C.green):C.slate);
+  }
+  /* 按键 */
+  r(122,64,32,14,C.pane);
+  for(let i=0;i<4;i++) r(124+i*8,67,6,8,(i===1)?C.gold:C.steel);
+};
+
+/* 电话 */
+SC.phone=function(t){
+  band(0,VH,C.pane,C.slate);
+  for(let y=0;y<VH;y+=8) r(0,y,VW,1,'rgba(0,0,0,.10)');
+  r(58,20,76,54,C.ink); r(60,22,72,50,C.deep);
+  r(62,24,68,46,C.slate);
+  /* 机身 */
+  r(76,40,40,22,C.rust); r(78,42,36,18,C.brown);
+  /* 听筒 */
+  r(70,30,52,10,C.ink); r(72,32,48,6,C.deep);
+  r(70,28,8,14,C.rust); r(114,28,8,14,C.rust);
+  /* 转盘 */
+  g.strokeStyle=C.ink; g.lineWidth=1;
+  g.beginPath(); g.arc(96,56,11,0,Math.PI*2); g.stroke();
+  for(let i=0;i<10;i++){
+    const ang=-Math.PI/2+i*Math.PI/5;
+    r(96+Math.cos(ang)*8-1,56+Math.sin(ang)*8-1,2,2,C.mist);
+  }
+  /* 卷线 */
+  g.strokeStyle=C.ink; g.beginPath(); g.moveTo(96,68);
+  for(let i=0;i<9;i++) g.lineTo(96+((i%2)?4:-4), 72+i*3);
+  g.stroke();
+  /* 微光 */
+  r(140,34,3,3,(Math.sin(t*0.004)>0.3)?C.amber:C.rust);
+};
+
+/* 信号塔顶 · 仰视 */
+SC.tower=function(t){
+  band(0,VH,C.ink,C.night);
+  stars(88,70,VH);
+  /* 塔架向上收拢 */
+  g.strokeStyle=C.slate; g.lineWidth=1;
+  for(let i=0;i<9;i++){
+    const y=104-i*12, w=52-i*4.6;
+    if(w<=0) break;
+    g.beginPath(); g.moveTo(VW/2-w,y); g.lineTo(VW/2-w+3,y-12); g.stroke();
+    g.beginPath(); g.moveTo(VW/2+w,y); g.lineTo(VW/2+w-3,y-12); g.stroke();
+    g.beginPath(); g.moveTo(VW/2-w,y); g.lineTo(VW/2+w-9,y-12); g.stroke();
+  }
+  for(let i=0;i<5;i++) r(VW/2-26+i*3, 96-i*20, 52-i*6, 1, C.slate);
+  /* 顶灯 */
+  const bl=(Math.sin(t*0.0032)>0);
+  if(bl){ r(VW/2-4,8,8,4,C.red); r(VW/2-7,9,14,2,C.crimson);
+          g.fillStyle='rgba(228,59,68,.22)'; g.beginPath(); g.arc(VW/2,10,22,0,Math.PI*2); g.fill(); }
+  snow(17,55,t,0.055,C.mist);
+  r(VW/2-10,4,20,2,C.deep);
+};
+
+/* 列车逼近 */
+SC.train=function(t){
+  band(0,50,C.ink,C.slate);
+  stars(4,34,44); hills(50,C.deep,3,4,2);
+  snowGround(60,C.deep,C.slate);
+  rails(62,5,C.steel,C.slate);
+  const p=(Math.sin(t*0.0009)*0.5+0.5);
+  const x=VW/2, y=64+ (1-p)*4;
+  const rad=6+p*30;
+  g.fillStyle='rgba(254,174,52,'+(0.05+p*0.30)+')';
+  g.beginPath(); g.arc(x,y,rad,0,Math.PI*2); g.fill();
+  g.fillStyle='rgba(255,255,255,'+(0.5+p*0.5)+')';
+  g.beginPath(); g.arc(x,y,2+p*5,0,Math.PI*2); g.fill();
+  r(x-14-p*22,y-4,28+p*44,10+p*12,C.ink);
+  snow(9,60,t,0.07,C.mist);
+};
+
+/* 黎明 */
+SC.dawn=function(t){
+  band(0,40,C.plum,C.orange); band(40,62,C.orange,C.gold); band(62,72,C.gold,C.sand);
+  r(0,72,VW,VH-72,C.mist); 
+  const rnd=mulberry32(64);
+  for(let i=0;i<120;i++){r((rnd()*VW)|0,(72+rnd()*(VH-72))|0,1,1,C.white);}
+  hills(74,C.slate,3,4,6);
+  r(118,52,44,20,C.deep); r(116,48,48,4,C.slate);
+  r(126,58,9,9,C.amber); r(127,59,7,7,C.gold);
+  rails(78,4,C.steel,C.fog);
+  const bx=34; r(bx,30,2,42,C.deep);
+  for(let y=32;y<72;y+=5) r(bx-4,y,10,1,C.deep);
+  r(bx-2,28,6,2,C.moss);
+  for(let i=0;i<3;i++){ const bx2=20+i*70, by=26+i*4; r(bx2,by,3,1,C.ink); r(bx2-3,by-1,3,1,C.ink);}
+};
+
+/* 隧道 / 循环 */
+SC.tunnel=function(t){
+  r(0,0,VW,VH,C.ink);
+  for(let i=0;i<9;i++){
+    const p=((t*0.035+i*12)%108);
+    const s=1-p/108;
+    g.strokeStyle=mix(C.ink,C.slate,s*0.9);
+    g.lineWidth=1; g.beginPath();
+    g.ellipse(VW/2,VH/2,60*s+4,34*s+3,0,0,Math.PI*2); g.stroke();
+  }
+  const rnd=mulberry32((t*0.05)|0);
+  for(let i=0;i<300;i++) r((rnd()*VW)|0,(rnd()*VH)|0,1,1, rnd()>.87?C.slate:C.ink);
+  r(VW/2-1,VH/2-1,3,3,C.mist);
+};
+
+/* 1979 年站台 · 旧照片 */
+SC.flash79=function(t){
+  band(0,VH,C.sand,C.fog);
+  const rnd=mulberry32(19);
+  for(let i=0;i<2400;i++){
+    const x=(rnd()*VW)|0,y=(rnd()*VH)|0,v=rnd();
+    r(x,y,1,1, v>.90?C.white:(v>.52?C.brown:C.fog));
+  }
+  /* 站台 */
+  r(0,78,VW,VH-78,C.brown);
+  r(0,78,VW,1,C.sand);
+  for(let x=0;x<VW;x+=9) r(x,80,1,VH-80,'#8a5c40');
+  /* 远处列车剪影 */
+  r(118,60,74,18,'#733e39');
+  r(122,56,18,5,'#733e39'); r(146,56,18,5,'#733e39'); r(170,56,18,5,'#733e39');
+  for(let i=0;i<6;i++) r(128+i*11,66,6,7,'#3e2731');
+  /* 灯柱 */
+  r(38,26,2,52,C.steel);
+  r(34,24,10,4,C.amber);
+  const l=(Math.sin(t*0.0018)*0.10+0.90);
+  g.fillStyle='rgba(254,174,52,'+(0.15*l)+')';
+  g.beginPath(); g.moveTo(39,28); g.lineTo(10,78); g.lineTo(68,78); g.closePath(); g.fill();
+  r(35,25,8,2,C.gold);
+  /* 扳道器旁的人 */
+  const sway=Math.sin(t*0.0016)*0.6;
+  r(92+sway,62,7,15,C.ink);
+  r(93+sway,56,5,7,C.ink);
+  r(92+sway,53,7,4,C.slate);
+  r(86+sway,74,18,2,C.pane);
+  r(96+sway,68,3,9,C.pane);
+  /* 照片暗角 */
+  g.fillStyle='rgba(24,20,37,0.34)';
+  g.fillRect(0,0,VW,9); g.fillRect(0,VH-9,VW,9);
+  g.fillRect(0,0,9,VH); g.fillRect(VW-9,0,9,VH);
+};
+
+/* 车厢内部 · 十四节 */
+SC.carriage=function(t){
+  r(0,0,VW,VH,C.ink);
+  band(0,30,C.pane,C.deep);
+  /* 顶灯 */
+  const f=Math.sin(t*0.0038)*0.5+0.5;
+  for(let i=0;i<4;i++){
+    const lx=30+i*44;
+    r(lx,5,14,3,mix(C.fog,C.gold,0.35+f*0.45));
+    g.fillStyle='rgba(254,231,97,'+(0.045+f*0.045)+')';
+    g.beginPath(); g.moveTo(lx+7,8); g.lineTo(lx-16,66); g.lineTo(lx+30,66); g.closePath(); g.fill();
+  }
+  /* 地板与过道 */
+  r(0,86,VW,VH-86,C.deep);
+  r(VW/2-11,50,22,36,C.ink);
+  /* 两侧座椅（透视收拢） */
+  for(let i=0;i<6;i++){
+    const y=50+i*6, w=42+i*9;
+    const lit=1-i*0.11;
+    r(VW/2-w-26,y,26,7,mix(C.ink,'#733e39',lit));
+    r(VW/2+w,y,26,7,mix(C.ink,'#733e39',lit));
+    /* 乘客剪影 */
+    r(VW/2-w-21,y-9,15,10,mix(C.ink,C.slate,lit*0.8));
+    r(VW/2+w+6,y-9,15,10,mix(C.ink,C.slate,lit*0.8));
+  }
+  /* 窗口 */
+  [7,171].forEach(function(x){ r(x,28,14,26,C.ink); r(x,40,14,1,C.deep); });
+  /* 最后一排：坐得笔直的人 */
+  r(VW/2-10,40,20,26,C.pane);
+  r(VW/2-8,31,16,12,C.steel);
+  r(VW/2-6,34,12,6,C.pane);
+  r(VW/2-7,37,4,2,C.ink); r(VW/2+3,37,4,2,C.ink);
+  r(VW/2-9,66,18,4,C.ink);          /* 膝上的帽子 */
+  /* 手电光扫过 */
+  const gx=((t*0.022)%220)-40;
+  g.fillStyle='rgba(254,231,97,0.09)';
+  g.beginPath(); g.moveTo(gx,VH); g.lineTo(gx+74,18); g.lineTo(gx+116,18); g.lineTo(gx+42,VH); g.closePath(); g.fill();
+};
+
+/* ---------- 4. 声音 ---------- */
+let AC=null, sndOn=true, droneGain=null;
+function actx(){
+  if(!AC){
+    try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; }
+  }
+  if(AC.state==='suspended') AC.resume();
+  return AC;
+}
+function blip(freq,dur,type,vol){
+  if(!sndOn) return; const a=actx(); if(!a) return;
+  freq=freq||520; dur=dur||0.028; type=type||'square'; vol=vol||0.045;
+  const o=a.createOscillator(), gn=a.createGain();
+  o.type=type; o.frequency.value=freq;
+  gn.gain.setValueAtTime(0,a.currentTime);
+  gn.gain.linearRampToValueAtTime(vol,a.currentTime+0.004);
+  gn.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur);
+  o.connect(gn); gn.connect(a.destination); o.start(); o.stop(a.currentTime+dur+0.01);
+}
+function noiseBurst(dur,vol){
+  if(!sndOn) return; const a=actx(); if(!a) return;
+  dur=dur||0.2; vol=vol||0.06;
+  const n=a.sampleRate*dur|0, buf=a.createBuffer(1,n,a.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n);
+  const s=a.createBufferSource(); s.buffer=buf;
+  const f=a.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1400; f.Q.value=0.7;
+  const gn=a.createGain(); gn.gain.value=vol;
+  s.connect(f); f.connect(gn); gn.connect(a.destination); s.start();
+}
+function chord(freqs){
+  if(!sndOn) return;
+  freqs.forEach(function(f,i){ setTimeout(function(){ blip(f,0.09,'square',0.032); },i*55); });
+}
+function startDrone(){
+  if(!sndOn) return; const a=actx(); if(!a||droneGain) return;
+  droneGain=a.createGain(); droneGain.gain.value=0.016; droneGain.connect(a.destination);
+  [55,82.5,110].forEach(function(f,i){
+    const o=a.createOscillator(); o.type='triangle'; o.frequency.value=f;
+    const gn=a.createGain(); gn.gain.value=i===2?0.4:1;
+    o.connect(gn); gn.connect(droneGain); o.start();
+  });
+}
+function stopDrone(){
+  if(droneGain){ try{ droneGain.disconnect(); }catch(e){} droneGain=null; }
+}
+
+/* ---------- 5. 状态 ---------- */
+const SAVEKEY='echostation.save.v1';
+let S={node:'start',flags:{},loops:0,seen:{},ends:{},time:0};
+
+function newRun(keepMeta){
+  const meta = keepMeta ? {ends:S.ends, loops:S.loops} : {ends:{}, loops:0};
+  S={node:'p1',flags:{},loops:meta.loops,seen:{},ends:meta.ends,time:0};
+  lastCardCh=null;
+  goto('p1');
+}
+function save(){
+  try{ localStorage.setItem(SAVEKEY, JSON.stringify({node:S.node,flags:S.flags,loops:S.loops,seen:S.seen,ends:S.ends})); }catch(e){}
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(SAVEKEY); if(!raw) return null;
+    const o=JSON.parse(raw); if(!o||!o.node) return null; return o;
+  }catch(e){ return null; }
+}
+
+/* ---------- 6. 剧本 ---------- */
+/* 剧本已外置到同目录的 story.js —— 改故事请改那个文件，改完刷新即可 */
+
+/* ---------- 7. 引擎 ---------- */
+const elText=document.getElementById('text');
+const elSpk=document.getElementById('speaker');
+const elCh=document.getElementById('choices');
+const elChTag=document.getElementById('chTag');
+const elLoop=document.getElementById('loopTag');
+const elHint=document.getElementById('hint');
+const elFx=document.getElementById('fx');
+
+let cur=null, lines=[], li=0, typing=false, typer=null, full='', curStyle='d', curWho='';
+let curOpts=[];
+let curBg='static';
+let lastCardCh=null;
+
+function showCard(txt){
+  const c=document.getElementById('card');
+  document.getElementById('cardTx').textContent=txt;
+  c.classList.remove('on'); void c.offsetWidth; c.classList.add('on');
+  buzz([16,46,16]);
+  blip(196,0.22,'triangle',0.05);
+}
+
+function goto(id){
+  const node=T[id];
+  if(!node){ console.warn('missing node',id); return; }
+  S.node=id;
+  if(!S.seen[id]) S.seen[id]=0;
+  S.seen[id]++;
+  cur=node; li=0;
+  curBg=node.bg||(cur.bg||'room');
+  elChTag.textContent=(node.ch||'--').split(' · ')[0];
+  elLoop.textContent='循环 '+String(S.loops).padStart(2,'0');
+  if(node.ch && node.ch!=='结局' && node.ch!==lastCardCh){ lastCardCh=node.ch; showCard(node.ch); }
+  if(node.onEnter){ node.onEnter(); return; }
+  lines=(node.lines||[]).filter(function(L){
+    const tag=L[3];
+    if(tag===undefined||tag===null) return true;
+    if(typeof tag==='function'){ try{ return !!tag(S); }catch(e){ return false; } }
+    if(tag==='ng') return S.loops>0;    /* 只在二周目及以后出现 */
+    if(tag==='f')  return S.loops===0;  /* 只在一周目出现 */
+    return true;
+  });
+  if(lines.length===0){ afterLines(); return; }
+  showLine();
+  save();
+}
+function route(id){ goto(id); }
+
+function showLine(){
+  const L=lines[li];
+  if(!L){ afterLines(); return; }
+  curWho=L[0]||''; full=L[1]||''; curStyle=L[2]||'d';
+  elSpk.textContent=curWho? ('▌ '+curWho) : (curStyle==='v'?'▌ 收音机':'');
+  elCh.innerHTML='';
+  curOpts=[];
+  elHint.style.visibility='hidden';
+  typeOut(full,curStyle);
+}
+function typeOut(str,style){
+  typing=true; elText.innerHTML='';
+  const span=document.createElement('span'); span.className=style;
+  elText.appendChild(span);
+  const ell=document.createElement('span'); ell.id='ell';
+  let i=0;
+  const speed = style==='v'? 34 : (style==='em'? 62 : 26);
+  clearInterval(typer);
+  let tick=0;
+  typer=setInterval(function(){
+    if(i>=str.length){ finishTyping(); return; }
+    const ch=str[i++];
+    span.textContent+=ch;
+    if(tick++%2===0) blip(style==='v'? 300+Math.random()*70 : 520+Math.random()*80, 0.018,'square',0.022);
+    if(style==='v' && Math.random()>0.94) noiseBurst(0.03,0.012);
+  },speed);
+  elText.appendChild(ell);
+}
+function finishTyping(){
+  clearInterval(typer);
+  elText.innerHTML='<span class="'+curStyle+'">'+esc(full)+'</span><span id="ell"></span>';
+  typing=false;
+}
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function nextLine(){
+  if(typing){ finishTyping(); return; }
+  li++;
+  if(li<(lines||[]).length){ showLine(); }
+  else { afterLines(); }
+}
+function afterLines(){
+  const node=cur;
+  if(node.ending){ showEnding(node.ending); return; }
+  if(node.goto){ goto(node.goto); return; }
+  if(node.back){ goto(node.back); return; }
+  const opts=(node.choices||[]).filter(function(c){
+    if(c.if && !c.if(S)) return false;
+    return true;
+  });
+  renderChoices(opts);
+}
+function renderChoices(opts){
+  elCh.innerHTML='';
+  elHint.style.visibility='visible';
+  if(!opts.length){ elCh.innerHTML='<div style="color:#5a6988;font-size:12px">（没有可选的行动）</div>'; return; }
+  chord([440,554,659]);
+  opts.forEach(function(o,i){
+    const b=document.createElement('button');
+    b.className='ch';
+    b.innerHTML='<span class="n">'+(i+1)+'</span>'+esc(o.t)+(o.lk?'<span class="lk">'+esc(o.lk)+'</span>':'');
+    b.onclick=function(){ pick(o); };
+    elCh.appendChild(b);
+  });
+  curOpts=opts;
+}
+let choicesReadyAt=0;
+function pick(o){
+  if(!o) return;
+  /* 防连点误触：选项刚出现的 260ms 内不响应，避免「点继续」那一下顺手选中了选项 */
+  if(performance.now()<choicesReadyAt) return;
+  choicesReadyAt=0;
+  buzz(10);
+  blip(700,0.05,'square',0.05);
+  if(o.run){ o.run(); return; }
+  if(o.set) Object.assign(S.flags,o.set);
+  if(o.to) goto(o.to);
+}
+
+function showEnding(e){
+  if(!S.ends[e.id]) S.ends[e.id]={t:e.t,d:e.d,n:0};
+  S.ends[e.id].n++;
+  S.loops++;
+  elFx.classList.remove('on'); void elFx.offsetWidth; elFx.classList.add('on');
+  noiseBurst(0.7,0.1);
+  setTimeout(function(){
+    elSpk.textContent='▌ 结局达成';
+    elText.innerHTML='<span class="em" style="color:var(--gold)">◆ '+esc(e.t)+' ◆</span>\n\n'+esc(e.d);
+    elCh.innerHTML='';
+    elHint.style.visibility='visible';
+    const o1={run:function(){ newRun(true); }};
+    const o2={run:function(){ openMenu(); }};
+    const b1=document.createElement('button'); b1.className='ch';
+    b1.innerHTML='<span class="n">1</span>再来一次（保留记忆）';
+    b1.onclick=function(){ pick(o1); };
+    const b2=document.createElement('button'); b2.className='ch';
+    b2.innerHTML='<span class="n">2</span>回到菜单';
+    b2.onclick=function(){ pick(o2); };
+    elCh.appendChild(b1); elCh.appendChild(b2);
+    curOpts=[o1,o2];
+    choicesReadyAt=performance.now()+300;
+    save();
+  },620);
+}
+
+/* ---------- 8. 输入 ---------- */
+const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+const HAS_PE = !!window.PointerEvent;
+
+/* 轻微震动反馈（不支持的设备自动忽略） */
+/* 轻微震动反馈：优先走原生桥（WebView 里的 navigator.vibrate 时灵时不灵） */
+function buzz(p){
+  try{
+    if(window.EchoNative && EchoNative.buzz){
+      var ms = (typeof p==='number') ? p : (p && p.length ? p[0] : 0);
+      EchoNative.buzz(Math.round(ms));
+      return;
+    }
+    if(navigator.vibrate) navigator.vibrate(p);
+  }catch(e){}
+}
+
+function panelOpen(){ return document.getElementById('panel').style.display==='block'; }
+function canAdvance(){ return !menuOpen && !panelOpen(); }
+function tapAdvance(){
+  if(!canAdvance()) return;
+  if(typing){ finishTyping(); return; }
+  if(curOpts.length) return;
+  nextLine();
+}
+function onInteractive(t){
+  return !!(t && t.closest &&
+    (t.closest('.ch')||t.closest('button')||t.closest('#menu')||t.closest('#panel')));
+}
+
+document.addEventListener('keydown',function(e){
+  if(menuOpen) return;
+  if(e.key===' '||e.key==='Enter'){
+    e.preventDefault();
+    if(typing){ finishTyping(); return; }
+    if(curOpts.length) return;
+    nextLine(); return;
+  }
+  const n=parseInt(e.key,10);
+  if(n>=1&&n<=9){
+    if(typing){ finishTyping(); return; }
+    const b=elCh.children[n-1];
+    if(b && b.className==='ch' && curOpts[n-1]) pick(curOpts[n-1]);
+  }
+});
+/* 指针统一处理：鼠标走点击，手指走「轻点 / 上滑 / 左滑」 */
+const cabEl=document.getElementById('cab');
+const boxEl=document.getElementById('box');
+let pStart=null, pMoved=false, lastTouchAt=0;
+
+if(HAS_PE){
+  cabEl.addEventListener('pointerdown',function(e){
+    pStart=null; pMoved=false;
+    if(e.pointerType==='mouse') return;
+    if(!canAdvance()) return;
+    if(onInteractive(e.target)) return;      /* 点在按钮/菜单上，交给它们自己处理 */
+    pStart={x:e.clientX,y:e.clientY,t:Date.now()};
+  },{passive:true});
+
+  cabEl.addEventListener('pointermove',function(e){
+    if(!pStart) return;
+    if(Math.abs(e.clientX-pStart.x)>12||Math.abs(e.clientY-pStart.y)>12) pMoved=true;
+  },{passive:true});
+
+  cabEl.addEventListener('pointerup',function(e){
+    if(e.pointerType!=='mouse') lastTouchAt=Date.now();
+    if(!pStart||e.pointerType==='mouse'){ pStart=null; return; }
+    const dx=e.clientX-pStart.x, dy=e.clientY-pStart.y, dt=Date.now()-pStart.t;
+    pStart=null;
+    if(!canAdvance()) return;
+    /* 上滑：仅当正文已滚到底才算「跳过」，否则让页面照常滚动 */
+    if(dy<-46 && Math.abs(dy)>Math.abs(dx) &&
+       boxEl.scrollTop+boxEl.clientHeight>=boxEl.scrollHeight-4){
+      tapAdvance(); return;
+    }
+    /* 左滑：跳过打字机 */
+    if(dx<-46 && Math.abs(dx)>Math.abs(dy)){ if(typing) finishTyping(); return; }
+    /* 轻点：翻页 / 补全当前这句 */
+    if(!pMoved && dt<450) tapAdvance();
+  },{passive:true});
+
+  cabEl.addEventListener('pointercancel',function(){ pStart=null; },{passive:true});
+}
+
+boxEl.addEventListener('click',function(e){
+  if(Date.now()-lastTouchAt<700) return;   /* 触摸已被指针事件消化，避免一次轻点翻两页 */
+  if(e.target.closest('.ch')) return;
+  if(menuOpen) return;
+  if(typing){ finishTyping(); return; }
+  if(curOpts.length) return;
+  nextLine();
+});
+
+/* ---------- 9. 菜单 ---------- */
+const elMenu=document.getElementById('menu');
+const elPanel=document.getElementById('panel');
+let menuOpen=true;
+function openMenu(){
+  menuOpen=true; elMenu.style.display='flex';
+  const sv=load();
+  document.getElementById('mCont').disabled=!sv;
+}
+function closeMenu(){ menuOpen=false; elMenu.style.display='none'; }
+document.getElementById('mNew').onclick=function(){
+  actx(); startDrone(); blip(880,0.08,'square',0.05);
+  closeMenu(); newRun(false);
+};
+document.getElementById('mCont').onclick=function(){
+  const sv=load(); if(!sv) return;
+  actx(); startDrone();
+  S.node=sv.node; S.flags=sv.flags||{}; S.loops=sv.loops||0;
+  S.ends=sv.ends||{}; S.seen=sv.seen||{};
+  closeMenu(); goto(sv.node);
+};
+document.getElementById('mEnd').onclick=function(){
+  const got=S.ends||{};
+  let h='';
+  ENDLIST.forEach(function(e){
+    const g=got[e.id];
+    if(g){ h+='<div class="endrow got"><div class="t">◆ '+esc(e.t)+' ('+g.n+')</div><div class="d">'+esc(e.d||'')+'</div></div>'; }
+    else if(e.secret){ h+='<div class="endrow"><div class="t">◇ ???</div><div class="d">隐藏结局 · 需要两件事：在第三章叫出他的名字，并且带上桌子底下那个铁盒里的东西。</div></div>'; }
+    else { h+='<div class="endrow"><div class="t">◇ ???</div><div class="d">尚未抵达。</div></div>'; }
+  });
+  document.getElementById('pBody').innerHTML=h;
+  elPanel.style.display='block';
+};
+document.getElementById('pClose').onclick=function(){ elPanel.style.display='none'; };
+document.getElementById('bMenu').onclick=function(){ openMenu(); };
+document.getElementById('bSnd').onclick=function(){
+  sndOn=!sndOn;
+  this.textContent = sndOn? '♪ 声音' : '× 静音';
+  this.style.color = sndOn? '' : '#e43b44';
+  if(sndOn){ startDrone(); blip(660,0.06); } else { stopDrone(); }
+};
+
+/* ---------- 10. 主循环 ---------- */
+let t0=performance.now();
+function loop(now){
+  const t=now-t0;
+  S.time=t;
+  const fn=SC[curBg]||SC.room;
+  fn(t);
+  requestAnimationFrame(loop);
+}
+/* 启动。
+   附带两个开发/写作时的快捷参数（手机上也常用）：
+     ?node=<节点id>   跳过菜单，直接落到某个节点（改完剧本想单看某段时很方便）
+     ?mute=1          静音启动
+   例：index.html?node=ch3_c */
+let bootNode='p1', bootAuto=false;
+try{
+  const q=new URLSearchParams(location.search);
+  const n=q.get('node');
+  if(n && T[n]){ bootNode=n; bootAuto=true; }
+  if(q.get('mute')==='1'){
+    sndOn=false;
+    document.getElementById('bSnd').textContent='× 静音';
+    document.getElementById('bSnd').style.color='#e43b44';
+  }
+}catch(err){}
+
+if(bootAuto){
+  menuOpen=false; elMenu.style.display='none';
+  S={node:bootNode,flags:{},loops:0,seen:{},ends:{},time:0};
+  lastCardCh=null;
+  goto(bootNode);
+}else{
+  openMenu();
+  goto('p1');
+}
+requestAnimationFrame(loop);
+
+/* ---------- 11. 移动端增强 ---------- */
+
+/* 提示文案按设备切换 */
+elHint.innerHTML = IS_TOUCH
+  ? '轻点画面继续 &nbsp;·&nbsp; 上滑跳过'
+  : '空格/回车 继续 &nbsp;·&nbsp; 数字键 选择';
+
+/* 触摸设备上点菜单时顺手请求全屏（iPhone Safari 不支持，静默失败即可） */
+function goFullscreen(){
+  if(window.EchoNative) return;   /* 安卓外壳已全屏，方向交给 manifest，别重复请求 */
+  try{
+    const de=document.documentElement;
+    if(!document.fullscreenElement && de.requestFullscreen) de.requestFullscreen().catch(function(){});
+    if(screen.orientation && screen.orientation.lock) screen.orientation.lock('portrait').catch(function(){});
+  }catch(err){}
+}
+if(IS_TOUCH) document.getElementById('menu').addEventListener('click',goFullscreen);
+
+/* 屏幕常亮：一局要玩半小时，别让它中途黑屏 */
+let wakeLock=null;
+function keepAwake(){
+  try{
+    if(!navigator.wakeLock) return;
+    navigator.wakeLock.request('screen').then(function(wl){
+      wakeLock=wl;
+      wl.addEventListener('release',function(){ wakeLock=null; });
+    }).catch(function(){});
+  }catch(err){}
+}
+if(IS_TOUCH) document.addEventListener('pointerdown',function once(){
+  document.removeEventListener('pointerdown',once);
+  keepAwake();
+},{passive:true});
+
+/* 切到后台：停掉嗡鸣并冻结画面时间；回到前台再续上 */
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden){ stopDrone(); }
+  else{
+    t0=performance.now()-S.time;
+    if(sndOn && !menuOpen) startDrone();
+    if(IS_TOUCH && !wakeLock) keepAwake();
+  }
+});
+
+/* Safari 双指缩放兜底 */
+['gesturestart','gesturechange','gestureend'].forEach(function(ev){
+  document.addEventListener(ev,function(e){ e.preventDefault(); },{passive:false});
+});
+
+/* PWA：只在 http(s) 下注册 Service Worker（用 file:// 打开时自动跳过） */
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+
+/* ---------- 安卓外壳：接管返回键 ----------
+   有面板就关面板，没菜单就开菜单，两者都不是才真的退出。
+   原生侧拿到 'exit' 才会 finish()。 */
+window.EchoAndroidBack = function(){
+  try{
+    if(panelOpen()){ elPanel.style.display='none'; return 'handled'; }
+    if(!menuOpen){ openMenu(); return 'handled'; }
+    return 'exit';
+  }catch(e){ return 'exit'; }
+};
+</script>
+</body>
+</html>

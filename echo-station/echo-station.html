@@ -1,0 +1,2076 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>回声车站 · ECHO STATION</title>
+<meta name="description" content="1987 年冬，废弃铁路 K-17 信号站。像素风循环叙事游戏，6 个结局，可离线游玩。">
+<meta name="theme-color" content="#0d0b14">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="回声车站">
+<meta name="format-detection" content="telephone=no,email=no,address=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+  :root{
+    --ink:#0d0b14; --deep:#181425; --slate:#262b44; --panel:#3a4466;
+    --steel:#5a6988; --fog:#8b9bb4; --mist:#c0cbdc; --white:#ffffff;
+    --cyan:#2ce8f5; --blue:#0099db; --navy:#124e89;
+    --red:#e43b44; --amber:#feae34; --gold:#fee761; --green:#63c74d;
+    --rust:#be4a2f;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  html{background:var(--ink);}
+  body{
+    background:
+      radial-gradient(circle at 50% 0%, #1d1830 0%, var(--ink) 60%),
+      var(--ink);
+    color:var(--mist);
+    font-family:"Cascadia Mono","Consolas","Menlo","Courier New",ui-monospace,monospace;
+    display:flex; align-items:center; justify-content:center;
+    padding:14px;
+    overflow:hidden;
+    min-height:100dvh;
+    overscroll-behavior:none;          /* 关掉 iOS 整页橡皮筋 */
+    touch-action:manipulation;          /* 去掉双击缩放的 300ms 延迟 */
+    -webkit-user-select:none; -moz-user-select:none; user-select:none;
+    -webkit-touch-callout:none;         /* 长按不弹「拷贝/查询」菜单 */
+  }
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:99;
+    background:repeating-linear-gradient(to bottom, rgba(0,0,0,.16) 0 1px, transparent 1px 3px);
+    mix-blend-mode:multiply; opacity:.5;
+  }
+  #cab{
+    width:100%; max-width:820px; position:relative;
+    border:3px solid var(--panel);
+    background:var(--deep);
+    box-shadow:0 0 0 3px var(--ink), 0 0 42px rgba(44,232,245,.10), 0 18px 60px rgba(0,0,0,.7);
+    display:flex; flex-direction:column;
+    max-height:calc(100vh - 28px);
+    max-height:calc(100dvh - 28px);
+  }
+  #bar{
+    display:flex; align-items:center; gap:8px;
+    padding:6px 10px; background:var(--slate);
+    border-bottom:3px solid var(--ink); font-size:11px; letter-spacing:.14em;
+    color:var(--fog); flex:0 0 auto;
+  }
+  #bar b{color:var(--cyan); font-weight:600; letter-spacing:.22em;}
+  #bar .sp{flex:1}
+  .tag{
+    border:1px solid var(--steel); padding:1px 6px; color:var(--mist); font-size:10px;
+  }
+  .tag.hot{border-color:var(--red); color:var(--red);}
+  .btn{
+    cursor:pointer; border:1px solid var(--steel); background:transparent;
+    color:var(--fog); font:inherit; font-size:10px; padding:2px 7px; letter-spacing:.1em;
+  }
+  .btn:hover{border-color:var(--cyan); color:var(--cyan);}
+  #view{position:relative; background:#000; flex:0 0 auto; overflow:hidden;}
+  #cv{
+    display:block; width:100%; height:auto; image-rendering:pixelated;
+    image-rendering:crisp-edges; background:#000;
+  }
+  #glow{
+    position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 120%, rgba(44,232,245,.10), transparent 70%);
+  }
+  #box{
+    flex:1 1 auto; overflow-y:auto; overflow-x:hidden;
+    padding:14px 16px 16px; min-height:150px;
+    border-top:3px solid var(--panel); background:linear-gradient(180deg,#1b1730,#141122);
+    overscroll-behavior:contain;              /* 滚到底不再带动整页 */
+    -webkit-overflow-scrolling:touch;         /* iOS 惯性滚动 */
+    touch-action:pan-y;                       /* 纵向滚动交给浏览器，横向留给手势 */
+  }
+  #speaker{
+    font-size:11px; letter-spacing:.2em; color:var(--amber); margin-bottom:7px;
+    min-height:14px; text-transform:uppercase;
+  }
+  #text{font-size:14px; line-height:1.95; min-height:5.6em; white-space:pre-wrap; word-break:break-word;}
+  #text .d{color:var(--fog);}            /* 环境/旁白 */
+  #text .v{color:var(--cyan);}           /* 收音机里的声音 */
+  #text .em{color:var(--gold);}
+  #text em{font-style:normal; color:var(--gold);}
+  #ell{display:inline-block; width:.62em; height:.95em; background:var(--cyan);
+       vertical-align:-2px; animation:bl .55s steps(1,end) infinite; margin-left:2px;}
+  @keyframes bl{50%{opacity:0}}
+  #choices{margin-top:12px; display:flex; flex-direction:column; gap:6px;}
+  .ch{
+    text-align:left; cursor:pointer; font:inherit; font-size:13.5px;
+    background:#00000033; border:1px solid var(--slate); border-left:4px solid var(--steel);
+    color:var(--mist); padding:8px 11px; line-height:1.5;
+    transition:background .1s, border-color .1s, transform .06s;
+  }
+  .ch:hover{background:rgba(44,232,245,.09); border-left-color:var(--cyan); color:var(--white);}
+  .ch:active{transform:translateX(2px);}
+  .ch .n{color:var(--steel); margin-right:8px;}
+  .ch:hover .n{color:var(--cyan);}
+  .ch .lk{color:var(--red); font-size:11px; margin-left:6px;}
+  #hint{font-size:10px; color:#4d5673; letter-spacing:.12em; margin-top:10px; text-align:right;}
+  /* menu */
+  #menu{
+    position:absolute; inset:0; background:linear-gradient(180deg,rgba(13,11,20,.96),rgba(13,11,20,.99));
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; z-index:20;
+  }
+  #menu h1{
+    /* text-indent 抵消末字后多出的字距，中文标题才能真的居中 */
+    font-size:clamp(26px,7vw,44px); letter-spacing:.36em; text-indent:.36em;
+    margin:0 0 2px;
+    color:var(--cyan); text-shadow:3px 3px 0 var(--navy), 6px 6px 0 #00000088;
+  }
+  #menu .sub{font-size:10px; letter-spacing:.42em; color:var(--steel); margin-bottom:16px;}
+  #menu .btn2{
+    width:min(280px,74vw); padding:10px; font:inherit; font-size:12px; letter-spacing:.24em;
+    background:#00000044; border:1px solid var(--panel); color:var(--fog); cursor:pointer;
+  }
+  #menu .btn2:hover{border-color:var(--cyan); color:var(--cyan); background:rgba(44,232,245,.08);}
+  #menu .btn2[disabled]{opacity:.32; cursor:default;}
+  #menu .ver{position:absolute; bottom:10px; font-size:9.5px; color:#3f4763; letter-spacing:.16em;}
+  #panel{
+    position:absolute; inset:0; z-index:30; background:rgba(9,8,15,.97);
+    padding:20px; overflow-y:auto; display:none;
+    overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+    -webkit-user-select:text; user-select:text;   /* 结局图鉴允许选中复制 */
+  }
+  #panel h2{font-size:13px; letter-spacing:.24em; color:var(--amber); margin:0 0 14px;}
+  .endrow{border-left:3px solid var(--panel); padding:9px 12px; margin-bottom:9px; background:#00000033;}
+  .endrow .t{color:var(--mist); font-size:13px; letter-spacing:.1em;}
+  .endrow .d{color:var(--fog); font-size:11.5px; margin-top:4px; line-height:1.7;}
+  .endrow.got{border-left-color:var(--green);}
+  .endrow.got .t{color:var(--gold);}
+  #fx{
+    position:absolute; inset:0; pointer-events:none; z-index:15; opacity:0;
+    background:var(--white);
+  }
+  #fx.on{animation:flash .5s ease-out;}
+  @keyframes flash{0%{opacity:.85}100%{opacity:0}}
+  #card{
+    position:absolute; inset:0; display:none; z-index:18; pointer-events:none;
+    align-items:center; justify-content:center; background:rgba(13,11,20,.88);
+  }
+  #card.on{display:flex; animation:card 1.9s ease forwards;}
+  #card span{
+    font-size:clamp(15px,4.2vw,24px); letter-spacing:.32em; color:var(--gold);
+    text-shadow:2px 2px 0 var(--navy), 4px 4px 0 #00000088;
+    border-top:1px solid var(--panel); border-bottom:1px solid var(--panel);
+    padding:11px 20px 11px 24px; text-align:center;
+    /* 窄屏上长章节名宁可折行，也不要被容器裁掉半个字 */
+    max-width:calc(100% - 28px); box-sizing:border-box;
+  }
+  @keyframes card{0%{opacity:0}14%{opacity:1}76%{opacity:1}100%{opacity:0}}
+  /* ============ 手机 · 竖屏 ============ */
+  @media (max-width:560px){
+    body{padding:0;}
+    #cab{
+      height:100vh; height:100dvh;
+      max-height:100vh; max-height:100dvh;
+      border-left:0; border-right:0; border-top:0;
+      /* 安卓外壳会算好刘海高度注入 --sai-*，WebView 报不出值时兜底 */
+      padding-top:max(env(safe-area-inset-top), var(--sai-top, 0px));
+      padding-left:max(env(safe-area-inset-left), var(--sai-left, 0px));
+      padding-right:max(env(safe-area-inset-right), var(--sai-right, 0px));
+    }
+    /* 手机宽度不够：英文站名会把右侧的「声音 / 菜单」挤出屏幕，直接让位 */
+    #bar{padding:8px 10px; gap:7px; font-size:10px; letter-spacing:.06em;}
+    #bar b{display:none;}
+    #bar .tag{font-size:10px; padding:2px 7px; letter-spacing:.08em;}
+    #bar .btn{padding:5px 8px; font-size:10.5px; letter-spacing:.04em;}
+    #view{display:flex; align-items:center; justify-content:center;}
+    #cv{
+      width:100%; height:auto;
+      width:min(100%, calc(38vh * 16 / 9));
+      width:min(100%, calc(38dvh * 16 / 9));
+    }
+    #box{padding:14px 15px calc(18px + max(env(safe-area-inset-bottom), var(--sai-bottom, 0px)));}
+    #text{font-size:16px; line-height:1.85; min-height:4.6em;}
+    #speaker{font-size:11.5px; margin-bottom:8px;}
+    #choices{gap:9px; margin-top:14px;}
+    .ch{font-size:15px; padding:13px 14px; min-height:48px; border-left-width:5px;}
+    .ch .n{margin-right:9px;}
+    #hint{font-size:10.5px; margin-top:14px;}
+    #menu{gap:11px; padding:20px;}
+    #menu h1{font-size:clamp(28px,9vw,40px);}
+    #menu .btn2{width:min(320px,82vw); padding:15px; font-size:13px; min-height:52px;}
+    #menu .ver{bottom:calc(12px + max(env(safe-area-inset-bottom), var(--sai-bottom, 0px)));}
+    #panel{padding:18px 16px calc(24px + max(env(safe-area-inset-bottom), var(--sai-bottom, 0px)));}
+    #panel .btn{padding:9px 14px; font-size:12px;}
+    #card span{font-size:clamp(16px,5vw,22px); letter-spacing:.24em; padding:12px 14px;}
+  }
+
+  /* ============ 手机 · 横屏（画面与文本左右分栏） ============ */
+  @media (orientation:landscape) and (max-height:600px){
+    body{padding:0;}
+    #cab{
+      width:100%; max-width:none;
+      height:100vh; height:100dvh;
+      max-height:none; border-width:0;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      grid-template-rows:auto 1fr;
+      grid-template-areas:"bar bar" "view box";
+      padding-left:max(env(safe-area-inset-left), var(--sai-left, 0px));
+      padding-right:max(env(safe-area-inset-right), var(--sai-right, 0px));
+    }
+    #bar{grid-area:bar;}
+    #view{
+      grid-area:view; display:flex; align-items:center; justify-content:center;
+      max-height:none;
+    }
+    #cv{width:100%; height:auto; max-height:100%; object-fit:contain;}
+    /* 章节标题卡默认贴在 #view 里，可横屏时 #view 只占左半边，
+       长章节名会被裁掉。改成铺满整个视口，跨两栏居中。 */
+    #card{position:fixed; inset:0;}
+    #box{
+      grid-area:box; border-top:0; border-left:3px solid var(--panel);
+      padding:12px 16px calc(12px + max(env(safe-area-inset-right), var(--sai-right, 0px)));
+    }
+    #text{font-size:15px; line-height:1.8; min-height:3.2em;}
+    .ch{font-size:14px; padding:10px 12px; min-height:42px;}
+    #choices{gap:6px; margin-top:10px;}
+    #menu{gap:8px;}
+    #menu h1{font-size:30px; letter-spacing:.3em;}
+    #menu .btn2{min-height:44px; padding:10px;}
+  }
+
+  /* ============ 触摸设备：干掉粘住的 hover 态，改用按下反馈 ============ */
+  @media (hover:none){
+    .ch:hover{background:#00000033; border-left-color:var(--steel); color:var(--mist);}
+    .ch:active{background:rgba(44,232,245,.14); border-left-color:var(--cyan); color:var(--white);}
+    #menu .btn2:hover{border-color:var(--panel); color:var(--fog); background:#00000044;}
+    #menu .btn2:active{border-color:var(--cyan); color:var(--cyan); background:rgba(44,232,245,.10);}
+    .btn:hover{border-color:var(--steel); color:var(--fog);}
+    .btn:active{border-color:var(--cyan); color:var(--cyan);}
+  }
+</style>
+</head>
+<body>
+<div id="cab">
+  <div id="bar">
+    <b>ECHO STATION</b>
+    <span class="tag" id="chTag">--</span>
+    <span class="sp"></span>
+    <span class="tag" id="loopTag">循环 00</span>
+    <button class="btn" id="bSnd">♪ 声音</button>
+    <button class="btn" id="bMenu">≡ 菜单</button>
+  </div>
+
+  <div id="view">
+    <canvas id="cv" width="192" height="108"></canvas>
+    <div id="glow"></div>
+    <div id="fx"></div>
+    <div id="card"><span id="cardTx"></span></div>
+  </div>
+
+  <div id="menu">
+    <h1>回声车站</h1>
+    <div class="sub">E C H O &nbsp; S T A T I O N</div>
+    <button class="btn2" id="mNew">新 的 一 次</button>
+    <button class="btn2" id="mCont">继 续 值 班</button>
+    <button class="btn2" id="mEnd">结 局 图 鉴</button>
+    <div class="ver">K-17 SIGNAL STATION · 1987 · BUILD 0.2 MOBILE</div>
+  </div>
+
+  <div id="panel">
+    <h2 id="pTitle">结局图鉴</h2>
+    <div id="pBody"></div>
+    <div style="margin-top:16px"><button class="btn" id="pClose">返回</button></div>
+  </div>
+
+  <div id="box">
+    <div id="speaker"></div>
+    <div id="text"></div>
+    <div id="choices"></div>
+    <div id="hint"></div>
+  </div>
+</div>
+
+<script>
+/* ==== story.js (inlined) ==== */
+/* ============================================================
+   《回声车站》剧本数据  ——  写作区
+   ------------------------------------------------------------
+   改这个文件，保存，刷新浏览器即可看到效果。
+
+   行格式:   [ 角色名, 文本, 样式, 条件 ]
+             角色名留空则不显示说话人
+             样式  d = 旁白/环境（灰）   v = 收音机电波（青）
+                   em = 强调（金）        省略 = 普通白
+             条件（可省略）:
+                   'ng'    只在二周目及以后出现
+                   'f'     只在一周目出现
+                   function(S){ return S.flags.xxx; }   自定义条件
+
+   选项:     { t: 文本, to: 节点ID, if: fn(S), set: {flag:true} }
+   节点:     { bg, ch, lines, choices, goto, back, ending, onEnter }
+   结尾打包: node tools/build.js .   ->  dist/echo-station.html
+   ============================================================ */
+
+const T={
+
+/* ==================== 序章 ==================== */
+
+  p1:{bg:'static',ch:'序章',lines:[
+    ['','（电流声）','v'],
+    ['','……K-17，K-17，请回答。','v'],
+    ['','你在值班室的椅子上睁开眼。','d'],
+    ['','窗玻璃上结着霜，暖气片早就凉了。桌上那台收音机亮着红色的指示灯，一下，一下。','d'],
+    ['','这里是 1987 年的冬天。11 月 3 日。','d'],
+    ['','你认得这面霜。同一个位置，同一块形状，连裂纹的走向都一样。','d','ng']
+  ],choices:[
+    {t:'拿起话筒',to:'p2'},
+    {t:'先看清四周',to:'p1_look'}
+  ]},
+
+  p1_look:{bg:'room',ch:'序章',lines:[
+    ['','值班室不到六平米。一张桌子，一把椅子，三台设备，一扇永远擦不干净的窗。','d'],
+    ['','墙上贴着值班表。你走过去。','d']
+  ],goto:'p1_roster'},
+
+  p1_roster:{bg:'roster',ch:'序章',lines:[
+    ['','值班表是手抄的，格子用尺子比着画，一格一格，很规矩。','d'],
+    ['','最后一行写着你的名字，日期是今天。','d'],
+    ['','下面还有一行。','d'],
+    ['','也是今天。但名字被划掉了，划得很用力，纸都破了。','d'],
+    ['','像是有人先写下自己的名字，然后改变主意。','d'],
+    ['','收音机还在响。','d'],
+    ['','『……请回答。你还有十二分钟。』','v']
+  ],choices:[
+    {t:'拿起话筒',to:'p2'},
+    {t:'再看一眼值班表',to:'p1_again'}
+  ]},
+
+  p1_again:{bg:'roster',ch:'序章',lines:[
+    ['','你盯着那行被划掉的字。','d'],
+    ['','墨迹是湿的。','d'],
+    ['','你没有笔。而且这张值班表是今天早上刚换的，纸白得发亮。','d'],
+    ['','那么，是谁在四个小时之前，用还没干的墨，写了这个？','d']
+  ],choices:[{t:'拿起话筒',to:'p2'}]},
+
+  p2:{bg:'room',ch:'序章',lines:[
+    ['','你按下通话键。','d'],
+    ['','「这里是 K-17。」','d'],
+    ['','收音机安静了一秒。','d'],
+    ['','然后里面传出你自己的声音。','d'],
+    ['','『这里是 K-17。』','v'],
+    ['','一字不差。语调、停顿、连把「七」读成半声的那个习惯，都一样。','d'],
+    ['','『别挂断。』那个声音说，『听我说完。这是第十一次了。』','v']
+  ],choices:[
+    {t:'「什么第十一次？」',to:'p3',set:{asked:true}},
+    {t:'挂断',to:'p2_hang'}
+  ]},
+
+  p2_hang:{bg:'room',ch:'序章',lines:[
+    ['','你挂断了。红灯灭了。','d'],
+    ['','三秒后，它自己亮了回来。','d'],
+    ['','『你每次都挂断。』那个声音说，听起来很累，『第十一次。』','v'],
+    ['','『你挂断，然后你走出去，然后……我在这儿。』','v']
+  ],choices:[{t:'「什么第十一次？」',to:'p3',set:{asked:true}}]},
+
+  p3:{bg:'room',ch:'序章',lines:[
+    ['','『三点二十七分，会有一列车经过 K-17。』','v'],
+    ['','『这条线 1979 年就停运了。可它每次都来，一秒不差。』','v'],
+    ['','『它不停车。但如果你站在轨道上，它会带走你。』','v'],
+    ['','『你每次都站在那里。』','v'],
+    ['','窗外远处传来铁轨的震动。很轻，很慢，像是有什么很重的东西正在醒来。','d'],
+    ['','红灯下的时钟：03:15。','d']
+  ],choices:[
+    {t:'「你是谁？」',to:'p4a'},
+    {t:'「我怎么知道你说的是真的？」',to:'p4b'},
+    {t:'走向窗户',to:'p4c'}
+  ]},
+
+  p4a:{bg:'static',ch:'序章',lines:[
+    ['','『我是你。』','v'],
+    ['','『准确地说，是三点二十七分之后的你。』','v'],
+    ['','停顿。','d'],
+    ['','『或者说，是没能走到三点二十七分之后的你。』','v'],
+    ['','『我在这条线里待了很久。久到我开始用「它」来称呼这条铁轨。』','v']
+  ],set:{knows_self:true},goto:'p5'},
+
+  p4b:{bg:'roster',ch:'序章',lines:[
+    ['','『看值班表。』它说，『第三行。』','v'],
+    ['','你回头。','d'],
+    ['','值班表上多了一行字，墨迹还是湿的。','d'],
+    ['','上面只有两个字。','d'],
+    ['','「别去」','em']
+  ],set:{warning:true},goto:'p5'},
+
+  p4c:{bg:'frost',ch:'序章',lines:[
+    ['','你用袖口擦开一块霜。','d'],
+    ['','站台是空的。信号灯是绿的。','d'],
+    ['','但灯下面站着一个人。','d'],
+    ['','背对着你，穿着和你一样的大衣。帽檐上积了一层雪。','d'],
+    ['','你数了数，那层雪至少积了一整天。','d'],
+    ['','可是今天早上，你才扫过站台。','d']
+  ],set:{saw_figure:true},goto:'p5'},
+
+  /* ==================== 第一章 · 十二分钟 ==================== */
+
+  p5:{bg:'room',ch:'第一章 · 十二分钟',lines:[
+    ['','收音机里的声音开始变调，像磁带被拉长。','d'],
+    ['','『还有九分钟。』它说，『这次，做点不一样的事。』','v'],
+    ['','咔。彻底的雪花噪声。','d'],
+    ['','值班室里能动的只有三样东西。','d'],
+    ['','发报机。录音机。墙上那部老式电话。','d'],
+    ['','墙上的钟：03:18。','em']
+  ],choices:[
+    {t:'用发报机',to:'s_telegraph',if:function(S){return !S.flags.did_tel;}},
+    {t:'打开录音机',to:'s_tape',if:function(S){return !S.flags.did_tape;}},
+    {t:'打电话',to:'s_phone',if:function(S){return !S.flags.did_phone;}},
+    {t:'再看一遍值班表',to:'p5_roster'},
+    {t:'从后门出去，爬到信号塔上',to:'s_tower'}
+  ]},
+
+  p5_roster:{bg:'roster',ch:'第一章 · 十二分钟',lines:[
+    ['','三天前的记录还在，字迹是你的。','d'],
+    ['','三点二十七分那一栏，写着：「列车经过。无异常。」','d'],
+    ['','连续七天，都是这一句。','d'],
+    ['','第八天的位置是空的。','d'],
+    ['','空着的位置下面压着一道铅笔印，很浅，像是有人写完之后又擦掉了。','d','ng']
+  ],back:'p5'},
+
+  s_telegraph:{bg:'telegraph',ch:'第一章 · 十二分钟',lines:[
+    ['','发报机是老式的，键帽被按得发亮。','d'],
+    ['','线是断的——你昨天亲手剪断的，因为「不该再有列车经过这条线」。','d'],
+    ['','但指示灯亮着。','d'],
+    ['','你把手放上键帽。','d']
+  ],set:{did_tel:true},choices:[
+    {t:'发：K-17 一切正常',to:'t_normal'},
+    {t:'发：别来',to:'t_stop'},
+    {t:'发：你自己的名字',to:'t_name'},
+    {t:'收回手',to:'p5_after'}
+  ]},
+
+  t_normal:{bg:'telegraph',ch:'第一章 · 十二分钟',lines:[
+    ['','滴——滴滴。','d'],
+    ['','键按下去的时候，你能感觉到另一端有什么东西接住了它。','d'],
+    ['','三秒后，回电。','d'],
+    ['','『正常。』','v'],
+    ['','只有两个字。但那是你的手速。','d']
+  ],goto:'p5_after'},
+
+  t_stop:{bg:'telegraph',ch:'第一章 · 十二分钟',lines:[
+    ['','滴。滴。滴——','d'],
+    ['','别。来。','d'],
+    ['','你把这两个字，发进了一条断了线的铁路。','d'],
+    ['','回电来得很快。','d'],
+    ['','『第一次。』','v'],
+    ['','『十一次里，你第一次说别来。』','v']
+  ],set:{sent_stop:true},goto:'p5_after'},
+
+  t_name:{bg:'telegraph',ch:'第一章 · 十二分钟',lines:[
+    ['','你开始敲自己的名字。','d'],
+    ['','敲到第二个字的时候，键帽自己往下沉了一下。','d'],
+    ['','像是有人从另一端，按住了同一根键。','d'],
+    ['','你把手拿开。','d'],
+    ['','键还在动。它自己把最后一个字敲完了。','d']
+  ],set:{sent_name:true},goto:'p5_after'},
+
+  s_tape:{bg:'tape',ch:'第一章 · 十二分钟',lines:[
+    ['','磁带机上插着一盘带子，标签是你的字迹。','d'],
+    ['','「工作记录 · 请勿覆盖」','d'],
+    ['','你按下播放。','d']
+  ],set:{did_tape:true},goto:'t_tape1'},
+
+  t_tape1:{bg:'tape',ch:'第一章 · 十二分钟',lines:[
+    ['','『……三点二十七分，列车经过。我在轨道上。』','v'],
+    ['','『我数到第七节车厢的时候，灯灭了。』','v'],
+    ['','『别去。』','v'],
+    ['','『别去。』','v'],
+    ['','『别去——』','v'],
+    ['','第二个「别去」不是刚才那一句。它的声音更轻，更远，像是从很深的地方浮上来的。','d']
+  ],choices:[
+    {t:'继续听',to:'t_tape2'},
+    {t:'按停',to:'t_tape_stop'}
+  ]},
+
+  t_tape2:{bg:'void',ch:'第一章 · 十二分钟',lines:[
+    ['','你继续听。','d'],
+    ['','带子里不止一段。','d'],
+    ['','是很多段，一层压着一层。同一句话，被录了很多很多遍。','d'],
+    ['','有人在不同的夜里，反复按下录音键，说同一句「别去」。','d'],
+    ['','而每一次，他都没有听自己的。','d'],
+    ['','第四十一遍的时候，带子停了。','d'],
+    ['','标签背面还有一行小字，你之前没注意：','d'],
+    ['','「带子是给外面那位的，不是给你。」','em']
+  ],set:{tape_deep:true},goto:'t_tape3'},
+
+  t_tape_stop:{bg:'tape',ch:'第一章 · 十二分钟',lines:[
+    ['','你按停。','d'],
+    ['','机子停了。但声音没有。','d'],
+    ['','『别去』两个字还在，从机器外壳里渗出来，很轻。','d'],
+    ['','像是这句话已经被录进了这间屋子本身。','d']
+  ],goto:'t_tape3'},
+
+  t_tape3:{bg:'tape',ch:'第一章 · 十二分钟',lines:[
+    ['','你翻过带子。','d'],
+    ['','背面有一行小字：','d'],
+    ['','「带子是给外面那位的，不是给你。」','em'],
+    ['','你一直以为「外面那位」指的是站台上那个人。','d','ng'],
+    ['','你错了。它指的是车上的人。','d','ng']
+  ],set:{tape_secret:true},goto:'p5_after'},
+
+  s_phone:{bg:'phone',ch:'第一章 · 十二分钟',lines:[
+    ['','墙上那部电话的转盘还能动。','d'],
+    ['','它只能拨两位数——线路早就砍到只剩一个交换箱。','d'],
+    ['','你拿起听筒。里面是空的。不是忙音，是彻底的、没有底的空。','d']
+  ],set:{did_phone:true},choices:[
+    {t:'拨 00',to:'ph_00'},
+    {t:'拨 11',to:'ph_11'},
+    {t:'拨 27',to:'ph_27'},
+    {t:'放下听筒',to:'p5_after'}
+  ]},
+
+  ph_00:{bg:'phone',ch:'第一章 · 十二分钟',lines:[
+    ['','嘟——嘟——嘟——','d'],
+    ['','没人接。','d'],
+    ['','但每次响到第四声，对面就有很轻的一下呼吸。','d'],
+    ['','像是有人已经举着听筒等了很久，只是不肯先开口。','d']
+  ],goto:'p5_after'},
+
+  ph_11:{bg:'phone',ch:'第一章 · 十二分钟',lines:[
+    ['','接通了。','d'],
+    ['','对面是站内广播。你听得出那个失真的女声，每天整点报站的那个。','d'],
+    ['','『K-17 站。当前时间，三点十九分。』','v'],
+    ['','『下一班列车，三点二十七分。』','v'],
+    ['','『请值班员做好准备。』','v'],
+    ['','广播里从来没有「做好准备」这句话。你从来没听过。','d']
+  ],set:{heard_broadcast:true},goto:'p5_after'},
+
+  ph_27:{bg:'phone',ch:'第一章 · 十二分钟',lines:[
+    ['','你拨了很久。','d'],
+    ['','转盘回到原位的时候，听筒里出现了一个女人的声音。','d'],
+    ['','『你终于打来了。』','v'],
+    ['','『我等了十一个晚上。』','v'],
+    ['','你想问你是谁。但你没有问，因为你想起来了——这个声音，你七岁那年，在厨房里听她哼过歌。','d'],
+    ['','『别站在轨道上，』她说，『你站过一次了。』','v'],
+    ['','『回来吃饭。』','v']
+  ],set:{called_her:true},goto:'p5_after'},
+
+  s_tower:{bg:'tower',ch:'第一章 · 十二分钟',lines:[
+    ['','你从后门出去，踩着梯子上塔。','d'],
+    ['','雪落在铁架上，没有声音。','d'],
+    ['','爬到一半，你听见下面有人在雪地里走。','d'],
+    ['','你没有回头看。','d'],
+    ['','塔顶的风很大。从这里能看见整条线，一直延伸到山后面的黑里。','d'],
+    ['','远处，铁轨开始发亮。','em']
+  ],set:{tower:true},goto:'p5_after'},
+
+  p5_after:{bg:'room',ch:'第一章 · 十二分钟',lines:[
+    ['','墙上的钟：03:22。','d'],
+    ['','你做了不止一件事。这在前十一遍里没发生过。','d',function(S){
+      const f=S.flags;
+      return [f.did_tel,f.did_tape,f.did_phone].filter(Boolean).length>=2;
+    }]
+  ],goto:'p5_check'},
+
+  p5_check:{bg:'room',ch:'第一章 · 十二分钟',lines:[],onEnter:function(){
+    const f=S.flags;
+    const done=[f.did_tel,f.did_tape,f.did_phone].filter(Boolean).length;
+    if(f.tower || done>=2) route('ch2_intro');
+    else route('p5');
+  }},
+
+  /* ==================== 第二章 · 断线的另一端 ==================== */
+
+  ch2_intro:{bg:'room',ch:'第二章 · 断线的另一端',lines:[
+    ['','收音机不说话了。','d'],
+    ['','但它也没有关。红灯还亮着。','d'],
+    ['','像是在等你。','d'],
+    ['','桌角有一张纸，是你今天凌晨写的值班记录。上面只有三个字：','d'],
+    ['','「不是车。」','em'],
+    ['','你写字的时候手很稳。这在前十一遍里也没有过。','d','ng'],
+    ['','你抬头看这间屋子。六平米。八年。','d'],
+    ['','你决定不再翻那三台设备。这次翻这间屋子本身。','d']
+  ],goto:'ch2'},
+
+  ch2:{bg:'room',ch:'第二章 · 断线的另一端',lines:[
+    ['','八年里，这间屋子被很多人用过。也有很多人没敢细看它。','d']
+  ],choices:[
+    {t:'看墙上那张列车时刻表',to:'c2_tt',if:function(S){return !S.flags.tt;}},
+    {t:'拉开档案柜最下面一格',to:'c2_file',if:function(S){return !S.flags.file;}},
+    {t:'翻值班日志的最后三页',to:'c2_log',if:function(S){return !S.flags.log;}},
+    {t:'看桌子底下那个铁盒',to:'c2_box',if:function(S){return !S.flags.box;}},
+    {t:'顺着发报机那根断线走',to:'c2_line_go',if:function(S){return !S.flags.carriage;}},
+    {t:'回到椅子上，把收音机拧到那个频率',to:'ch2_go'}
+  ]},
+
+  c2_line_go:{bg:'room',ch:'第二章 · 断线的另一端',lines:[],onEnter:function(){
+    if(S.flags.line) route('c2_car'); else route('c2_line');
+  }},
+
+  ch2_go:{bg:'room',ch:'第二章 · 断线的另一端',lines:[],onEnter:function(){
+    if(S.flags.carriage) route('ch3_intro'); else route('ch2_nudge');
+  }},
+
+  ch2_nudge:{bg:'room',ch:'第二章 · 断线的另一端',lines:[
+    ['','你坐回椅子上，把手放在收音机上。','d'],
+    ['','它没有反应。','d'],
+    ['','因为它不是在等你坐下。它在等一个已经知道自己在听什么的人。','d'],
+    ['','你还不知道。','em'],
+    ['','线的那一头，你还没有走到。','d']
+  ],goto:'ch2'},
+
+  c2_tt:{bg:'roster',ch:'第二章 · 断线的另一端',lines:[
+    ['','时刻表钉在墙上，1979 年印的，纸已经黄透了。','d'],
+    ['','你一行一行往下看。','d'],
+    ['','22:40，货运，上行，通过。','d'],
+    ['','23:15，货运，下行，通过。','d'],
+    ['','01:05，客车 K-17 次，下行，停车。','d'],
+    ['','03:27，客车 K-17 次，上行，停车。','d'],
+    ['','然后是一道红笔，从上到下，划掉了整个 1979 年 11 月。','d']
+  ],goto:'c2_tt2'},
+
+  c2_tt2:{bg:'roster',ch:'第二章 · 断线的另一端',lines:[
+    ['','两班车都是 K-17 次。同一列车。','d'],
+    ['','一列车，在同一条线上，向两个方向各跑一次。','d'],
+    ['','或者——不是两次。','d'],
+    ['','是同一列车被记录了两遍。一遍是它来的样子，一遍是它该有的样子。','d'],
+    ['','你数了数两班车之间的时间。','d'],
+    ['','01:05 到 03:27。两小时二十二分钟。','d'],
+    ['','一条只有三十公里的支线，跑不了两个半小时。','d'],
+    ['','除非它一直停着。','em']
+  ],set:{tt:true},back:'ch2'},
+
+  c2_file:{bg:'roster',ch:'第二章 · 断线的另一端',lines:[
+    ['','档案柜最下面一格是锁着的，但锁舌早就断了。','d'],
+    ['','你拉出一叠事故卷宗。最上面那份，编号 K-17/791103。','d'],
+    ['','只有两页。','d'],
+    ['','第一页写着：「1979 年 11 月 3 日，K-17 站至黑石坳区间，因线路已停运，无列车经过。无人员伤亡。无财产损失。」','d'],
+    ['','第二页是空的。','d'],
+    ['','但第二页的背面，有人用铅笔写了几行字，很小，像是怕被人看见。','d']
+  ],goto:'c2_file2'},
+
+  c2_file2:{bg:'roster',ch:'第二章 · 断线的另一端',lines:[
+    ['','铅笔字写的是：','d'],
+    ['','「车在洞里。」','em'],
+    ['','「人在车上。」','em'],
+    ['','「信号没发出去。」','em'],
+    ['','「不是他睡着了。」','em'],
+    ['','落款没有名字，只有一个日期：1979.11.04。','d'],
+    ['','也就是事故的第二天。','d'],
+    ['','八年前，有一个人和你一样，在这间屋子里翻出了这份卷宗。','d'],
+    ['','然后他把「不是他睡着了」这句话，写成了整份卷宗的最后一行。','d']
+  ],set:{file:true},back:'ch2'},
+
+  c2_log:{bg:'roster',ch:'第二章 · 断线的另一端',lines:[
+    ['','值班日志是硬皮的，很厚，三年前开始用。','d'],
+    ['','你一页一页往回翻。','d'],
+    ['','「12月3日，晴，无异常。」','d'],
+    ['','「12月4日，雪，无异常。」','d'],
+    ['','「12月5日，晴，无异常。」','d'],
+    ['','每一页都是这几个字。无异常。','d'],
+    ['','翻到最后一页，你停住了。','d'],
+    ['','最后三页被整齐地撕掉了，撕口很平。','d'],
+    ['','但撕掉的那三页，你没有扔。','d']
+  ],goto:'c2_log2'},
+
+  c2_log2:{bg:'roster',ch:'第二章 · 断线的另一端',lines:[
+    ['','你拉开抽屉。','d'],
+    ['','三页纸躺在最底下，压着一枚铁路员工的铜徽章。','d'],
+    ['','第一页：「11月1日。我把表换掉了。新的那张纸太白了，写什么都像在撒谎。」','d'],
+    ['','第二页：「11月2日。梦见有人敲门。开门没有人。雪地上有两行脚印，一行来，一行没走。」','d'],
+    ['','第三页只有一行：','d'],
+    ['','「如果我明天没回来，请把灯扳成红的。」','em']
+  ],set:{log:true},back:'ch2'},
+
+  c2_box:{bg:'room',ch:'第二章 · 断线的另一端',lines:[
+    ['','桌子底下还有一个东西。你以前没注意过，因为它被桌布挡住了。','d'],
+    ['','一个铁皮饼干盒，锈得厉害，盖子卡得很紧。','d'],
+    ['','你用钥匙撬开它。','d'],
+    ['','里面是一张照片，和一张站台票。','d']
+  ],goto:'c2_box2'},
+
+  c2_box2:{bg:'flash79',ch:'第二章 · 断线的另一端',lines:[
+    ['','照片是黑白的，边上有锯齿。','d'],
+    ['','站台上只有一盏灯。一个人站在扳道器旁边，穿着制服，侧着脸，没有看镜头。','d'],
+    ['','背面的字是你的笔迹：「1979.11.03」。','d'],
+    ['','你从来没有见过这张照片。','d'],
+    ['','但你知道是谁拍的——拍照的人得站在对面那扇窗里，而那个位置，是值班室。','d'],
+    ['','是他自己。他把相机架在窗台上，定了时，然后走出去，站到那个位置上。','d'],
+    ['','他想留个记录。','d'],
+    ['','照片下面还有一张站台票。K-17 次，下行，01:05。','d'],
+    ['','票面背面写着：「返程未使用。」','em']
+  ],set:{box:true},back:'ch2'},
+
+  c2_line:{bg:'station',ch:'第二章 · 断线的另一端',lines:[
+    ['','发报机那根线，你昨天亲手剪断的。','d'],
+    ['','但你从来没想过它另一头通向哪儿。','d'],
+    ['','你蹲下去，扒开地板上的雪。','d'],
+    ['','线很旧，橡胶皮裂了，露出来的铜绿得发黑。','d'],
+    ['','你顺着它走。','d'],
+    ['','出了后门。走过站台。走过信号灯。','d'],
+    ['','线钻进了雪里。','d']
+  ],goto:'c2_line2'},
+
+  c2_line2:{bg:'tunnel',ch:'第二章 · 断线的另一端',lines:[
+    ['','铁轨从这里开始下坡，钻进山体。','d'],
+    ['','隧道口挂着冰。洞口是黑的，黑得很实在，像一块立着的铁。','d'],
+    ['','线一直伸进去，伸到黑的深处。','d'],
+    ['','你打开手电。光柱很细，照不了多远。','d'],
+    ['','然后你的手停住了。','d'],
+    ['','因为黑暗里有什么东西，反了一下光。','em']
+  ],goto:'c2_line3'},
+
+  c2_line3:{bg:'tunnel',ch:'第二章 · 断线的另一端',lines:[
+    ['','是一节车厢。','d'],
+    ['','停在洞口往里十几米的地方。','d'],
+    ['','车身上结着冰，但侧面的白漆字还在：K-17 次。','d'],
+    ['','八年的冰，一层叠一层，把整节车裹成了石头。','d'],
+    ['','它没有在跑。','d'],
+    ['','它一直停在这里。','em'],
+    ['','八年。','em']
+  ],set:{line:true},choices:[
+    {t:'走近它',to:'c2_car'},
+    {t:'转身回值班室',to:'ch2'}
+  ]},
+
+  c2_car:{bg:'carriage',ch:'第二章 · 断线的另一端',lines:[
+    ['','车门是开着的，只开了一条缝，刚好够一个人侧身挤进去。','d'],
+    ['','车厢里比外面暖。这不合理。','d'],
+    ['','顶灯亮着，很暗，像是快没电了。','d'],
+    ['','一排一排的座椅。','d'],
+    ['','每一张座椅上都坐着人。','d'],
+    ['','他们都穿着冬衣，手放在膝盖上，头微微低着。','d'],
+    ['','没有人动。没有人看你。','d'],
+    ['','他们都在等。','em']
+  ],goto:'c2_car2'},
+
+  c2_car2:{bg:'carriage',ch:'第二章 · 断线的另一端',lines:[
+    ['','你沿着过道往前走。','d'],
+    ['','你数了数。四十七个人。','d'],
+    ['','走过第七排的时候，你看见一个孩子，七八岁，怀里抱着一个铝饭盒。','d'],
+    ['','走过第十九排的时候，你看见一个女人，手里攥着一张站台票。','d'],
+    ['','走到最后一排，你停住了。','d'],
+    ['','最后一排只坐着一个人。','d'],
+    ['','他穿铁路制服，帽子放在腿上，坐得笔直。','d'],
+    ['','他抬起头看了你一眼，然后低下头，继续等。','d']
+  ],goto:'c2_car3'},
+
+  c2_car3:{bg:'carriage',ch:'第二章 · 断线的另一端',lines:[
+    ['','你没有认出他的脸。','d'],
+    ['','但你认识他的手。','d'],
+    ['','左手虎口到手腕，有一道疤，斜着，很深。','d'],
+    ['','你小时候见过那道疤。它每天早上给你拧开罐头盖子，然后再把盖子递给你，让你舔一口。','d'],
+    ['','你不知道自己是什么时候开始哭的。','d'],
+    ['','你没有出声。这节车厢里不适合出声。','d']
+  ],goto:'c2_car4'},
+
+  c2_car4:{bg:'carriage',ch:'第二章 · 断线的另一端',lines:[
+    ['','他的膝盖上放着一个本子。','d'],
+    ['','你伸手去拿。他没有拦你。','d'],
+    ['','第一页：「K-17 次，下行，01:05，停车。已完成。」','d'],
+    ['','第二页：「K-17 次，上行，03:27，等待通过信号。」','d'],
+    ['','「等待」两个字被描过很多遍，笔尖把纸戳穿了。','d'],
+    ['','后面每一页都是同一句。','d'],
+    ['','一整本，全是同一句。','d'],
+    ['','最后一页的页脚上，有一行小字：','d'],
+    ['','「孩子，你要是能听见，就把灯给我。」','em'],
+    ['','你想起磁带背面那句话：「带子是给外面那位的，不是给你。」','d',function(S){return !!S.flags.tape_secret;}],
+    ['','你一直以为是站台上的人。原来不是。','d',function(S){return !!S.flags.tape_secret;}]
+  ],set:{carriage:true},goto:'c2_car5'},
+
+  c2_car5:{bg:'carriage',ch:'第二章 · 断线的另一端',lines:[
+    ['','你把本子放回他的膝盖上。','d'],
+    ['','你站起来，往车门走。','d'],
+    ['','走到一半，你回头看了一眼。','d'],
+    ['','他还在那里，坐得笔直，帽子放在腿上。','d'],
+    ['','四十七个人陪着他。谁也没有说话。','d'],
+    ['','你忽然明白了一件事：这列车不是在等人来救它。','d'],
+    ['','它在等一句话。','em']
+  ],goto:'c2_back'},
+
+  c2_back:{bg:'station',ch:'第二章 · 断线的另一端',lines:[
+    ['','你从车上下来。','d'],
+    ['','雪落在你肩上，不化。','d'],
+    ['','你回头看了一眼那节车厢。顶灯还亮着，很暗，像一粒快烧完的炭。','d'],
+    ['','你走回值班室，把门关上。','d']
+  ],goto:'ch2'},
+
+  /* ==================== 第三章 · 第八年 ==================== */
+
+  ch3_intro:{bg:'room',ch:'第三章 · 第八年',lines:[
+    ['','你把旋钮拧到底，又拧回来。','d'],
+    ['','收音机里的雪声变了。','d'],
+    ['','不再是沙沙声，是一种很低的、有节奏的声音。','d'],
+    ['','像是有人在很远的地方，用指节敲桌子。','d'],
+    ['','三下。停。三下。停。','d'],
+    ['','你听过这个节奏。这是电报的呼号。','d','ng'],
+    ['','你在这台机器上听过四十一次「别去」。','d',function(S){return !!S.flags.tape_deep;}],
+    ['','那四十一个声音，其实都是同一个人在说。','d',function(S){return !!S.flags.tape_deep;}],
+    ['','你把手放在收音机上。','d'],
+    ['','它有一点温。','em']
+  ],goto:'ch3_a'},
+
+  ch3_a:{bg:'room',ch:'第三章 · 第八年',lines:[
+    ['','你不知道该说什么，就说了最简单的一句。','d'],
+    ['','「我听见了。」','d'],
+    ['','敲击声停了。','d'],
+    ['','然后那个声音回来了。是那个疲惫的、你的声音。','d'],
+    ['','『……你听见了什么？』','v'],
+    ['','你想了想。','d'],
+    ['','「你在等一个信号。」','d'],
+    ['','长时间的沉默。','d'],
+    ['','『谁告诉你的？』','v']
+  ],goto:'ch3_b'},
+
+  ch3_b:{bg:'room',ch:'第三章 · 第八年',lines:[
+    ['','「我自己看见的。」','d'],
+    ['','『你在哪儿看见的？』','v'],
+    ['','「隧道口。第十四节车厢。」','d'],
+    ['','沉默。这次的沉默很长，长到你以为它不会再开口了。','d'],
+    ['','然后它说了一句你没想到的话。','d'],
+    ['','『你母亲，她还在等你吃饭吗？』','v'],
+    ['','你想起那通电话。广播说的是「请值班员做好准备」。','d',function(S){return !!S.flags.heard_broadcast;}],
+    ['','八个字，八年。','d',function(S){return !!S.flags.heard_broadcast;}]
+  ],goto:'ch3_c'},
+
+  ch3_c:{bg:'room',ch:'第三章 · 第八年',lines:[
+    ['','你愣住了。','d'],
+    ['','因为这个问题不对。','d'],
+    ['','如果它真的是「三点二十七分之后的你」，它应该知道答案。','d'],
+    ['','它应该知道后来八年里都发生了什么。它应该知道你今天早上吃的是什么。','d'],
+    ['','它不知道。','d'],
+    ['','它只知道 1979 年 11 月 3 日以前的事。','d'],
+    ['','因为它就是从那天来的。','em'],
+    ['','「我是你。」——序章的时候，它是这么说的。','d',function(S){return !!S.flags.knows_self;}],
+    ['','它没有撒谎。只是它说的那个「你」，指的不是你。','d',function(S){return !!S.flags.knows_self;}]
+  ],goto:'ch3_d'},
+
+  ch3_d:{bg:'roster',ch:'第三章 · 第八年',lines:[
+    ['','你走过去，翻开值班表的第一页。','d'],
+    ['','纸很脆，边上卷起来了，一碰就掉渣。','d'],
+    ['','第一行，1979 年 11 月 3 日，夜班。','d'],
+    ['','值班员一栏，名字被涂掉了，涂得很厚，几乎把纸涂穿。','d'],
+    ['','你把它举到灯下，侧着看了一会儿。','d'],
+    ['','还是看出来了。','d'],
+    ['','因为那个字的写法你太熟了——你小时候学写字，描的就是他的字。','d']
+  ],goto:'ch3_e'},
+
+  ch3_e:{bg:'roster',ch:'第三章 · 第八年',lines:[
+    ['','三个字。','d'],
+    ['','中间那个字，竖钩写得特别长，收笔的时候会往上挑一下。','d'],
+    ['','你写自己名字的时候，也是这么写的。','d'],
+    ['','你从来没有刻意学过。你只是从小看他写。','d'],
+    ['','他姓你的姓。','em'],
+    ['','他是你父亲。','em'],
+    ['','你想起发报机上那一下——你敲自己的名字，有人替你敲完了最后一个字。','d',function(S){return !!S.flags.sent_name;}],
+    ['','现在你知道是谁的手了。','d',function(S){return !!S.flags.sent_name;}]
+  ],goto:'ch3_f'},
+
+  ch3_f:{bg:'room',ch:'第三章 · 第八年',lines:[
+    ['','收音机还在响，还在等。','d'],
+    ['','现在你知道它在等什么了。','d'],
+    ['','它在等一句「可以了」。','d'],
+    ['','八年里，没有一个值班的人对它说过这句话。','d'],
+    ['','因为每一个值班的人都以为，那只是一台坏掉的收音机。','d'],
+    ['','而每一个值班的人，在凌晨三点二十七分，都会走出去，站到轨道上。','d'],
+    ['','然后他们也留在了这里。','d'],
+    ['','和他们一起的，还有四十七个人。','d','ng'],
+    ['','你发过「别来」两个字。现在你知道那是发给谁的了。','d',function(S){return !!S.flags.sent_stop;}],
+    ['','也知道了它为什么只回你一句「第一次」。','d',function(S){return !!S.flags.sent_stop;}],
+    ['','你在最开始问过它一句「什么第十一次」。','d',function(S){return !!S.flags.asked;}],
+    ['','它没有回答。有些数字，说出来也只是数字。','d',function(S){return !!S.flags.asked;}]
+  ],goto:'ch3_choice'},
+
+  ch3_choice:{bg:'room',ch:'第三章 · 第八年',lines:[
+    ['','墙上的钟：03:26。','d'],
+    ['','你说什么？','em']
+  ],choices:[
+    {t:'叫他的名字',to:'ch3_name'},
+    {t:'「你在哪一节车厢？」',to:'ch3_car'},
+    {t:'什么也不说',to:'ch3_silent'}
+  ]},
+
+  ch3_name:{bg:'room',ch:'第三章 · 第八年',lines:[
+    ['','你把那三个字说出来了。','d'],
+    ['','你叫了他一声。像小时候叫他从院子里回来吃饭那样。','d'],
+    ['','收音机里的雪声整片地抖了一下，像是有人碰翻了什么。','d'],
+    ['','然后是很长的安静。','d'],
+    ['','八年来第一次，那台收音机没有回话。','d'],
+    ['','它只是亮着。','d'],
+    ['','亮着，像一个人终于把憋了很久的那口气，慢慢吐了出来。','d']
+  ],set:{said_name:true},goto:'final'},
+
+  ch3_car:{bg:'room',ch:'第三章 · 第八年',lines:[
+    ['','「你在哪一节车厢？」','d'],
+    ['','又是很长的沉默。','d'],
+    ['','『……我不知道。』','v'],
+    ['','『我一直在找。我数过很多遍，可每次数完，车厢就又多一节。』','v'],
+    ['','『我怕的不是数不完。』','v'],
+    ['','『我怕的是，我数完了，也没人来。』','v']
+  ],goto:'final'},
+
+  ch3_silent:{bg:'room',ch:'第三章 · 第八年',lines:[
+    ['','你什么都没说。','d'],
+    ['','收音机等了一会儿。','d'],
+    ['','然后它说：','d'],
+    ['','『……好。』','v'],
+    ['','『那就再等一次。』','v']
+  ],goto:'final'},
+
+  /* ==================== 终章 · 三点二十七分 ==================== */
+
+  final:{bg:'room',ch:'终章 · 三点二十七分',lines:[
+    ['','三点二十六分。','d'],
+    ['','五十九秒。','d'],
+    ['','铁轨开始震动。','d'],
+    ['','不是列车的声音，是雪被压实的声音。一脚，一脚。','d'],
+    ['','有人正在沿着铁轨，走向这间屋子。','d'],
+    ['','你站起来。椅子在地上刮了一声。','d']
+  ],goto:'final_see'},
+
+  final_see:{bg:'frost',ch:'终章 · 三点二十七分',lines:[
+    ['','你擦开霜。','d'],
+    ['','站台上站着一个人。','d'],
+    ['','背对着你。他穿着你的大衣，帽子上的雪积了一整天那么厚。','d'],
+    ['','你见过这个背影。刚醒来的那天，你在结霜的窗上就见过。','d',function(S){return !!S.flags.saw_figure;}],
+    ['','他慢慢转过身。','d'],
+    ['','你看不清他的脸，但你看得清他在摇头。','d'],
+    ['','你想起值班表上那两个字。','d',function(S){return !!S.flags.warning;}],
+    ['','「别去」。写的时候，他大概也知道没有人会听。','d',function(S){return !!S.flags.warning;}],
+    ['','站台上站着两个人。','d',function(S){return !!S.flags.carriage;}],
+    ['','一个背对着你，一个坐在站台边上，把帽子放在腿上。','d',function(S){return !!S.flags.carriage;}],
+    ['','这一次你会看清他们的。','d',function(S){return !!S.flags.carriage;}]
+  ],goto:'final_choice'},
+
+  final_choice:{bg:'train',ch:'终章 · 三点二十七分',lines:[
+    ['','远处，铁轨亮成一条线。','d'],
+    ['','墙上的钟：03:26:50。','d'],
+    ['','你不是第一次做这个选择。但你是第一次知道自己在选择什么。','d','ng']
+  ],choices:[
+    {t:'开门走出去，站到轨道上',to:'end_repeat'},
+    {t:'锁上门，拉开椅子坐下',to:'end_stay'},
+    {t:'抓起听筒，对着收音机喊话',to:'end_echo'},
+    {t:'从后门出去，爬上信号塔，把灯扳成红的',to:'end_after'},
+    {t:'先对着收音机，把该说的话说完',to:'end_home',if:function(S){
+      return !!(S.flags.said_name && S.flags.box);
+    }}
+  ]},
+
+  /* ==================== 结局 ==================== */
+
+  end_repeat:{bg:'train',ch:'结局',lines:[
+    ['','你走出去。','d'],
+    ['','雪没到脚踝。信号灯还是绿的，绿得像一句谎。','d'],
+    ['','你站到轨道正中，面朝来车的方向。','d'],
+    ['','你想，这一次总该不一样了吧。','d'],
+    ['','灯到了。','d'],
+    ['','然后是一片黑。','d'],
+    ['','再睁开眼的时候，窗玻璃上结着霜，暖气片早就凉了。','d'],
+    ['','桌上的收音机亮着红色的指示灯。','d'],
+    ['','一下，一下。','d'],
+    ['','『……K-17，K-17，请回答。』','v'],
+    ['','你走进那节车厢，找了个位置坐下。','d','ng'],
+    ['','你数了数。你是第四十八个。','d','ng']
+  ],ending:{id:'repeat',t:'第十二次',d:'你选择了最熟的那条路。循环不会因为你勇敢而奖励你，它只会因为你重复而延长。四十七个人又等了一年，而其中多了一个你。'}},
+
+  end_stay:{bg:'room',ch:'结局',lines:[
+    ['','你锁上门。','d'],
+    ['','搬了椅子，背对着窗，坐下。','d'],
+    ['','你决定什么都不做。','d'],
+    ['','铁轨的震动从椅子里传上来，穿过脊椎，一直震到牙齿。','d'],
+    ['','三点二十七分。','d'],
+    ['','列车经过了。','d'],
+    ['','没有停。','d'],
+    ['','三点二十八分。','d'],
+    ['','收音机安静了。红灯灭了。窗外的天开始泛白。','d'],
+    ['','你活过了三点二十七分。','d'],
+    ['','天亮以后，你去了隧道口。','d'],
+    ['','那节车厢还在那里，冰又厚了一层。','d'],
+    ['','你站在雪里看了一会儿，然后回屋，泡了今天的第一杯茶。','d'],
+    ['','值班表上多了一行字，是你的笔迹：','d'],
+    ['','「11月4日，晴。无异常。」','em']
+  ],ending:{id:'stay',t:'静默',d:'活下去是最低成本的答案，也是最贵的。你保住了自己，代价是承认那四十七个人与你无关——包括坐在最后一排的那一个。'}},
+
+  end_echo:{bg:'static',ch:'结局',lines:[
+    ['','你抓起听筒，对着收音机喊。','d'],
+    ['','「我在。我在听。说下去。」','d'],
+    ['','雪花噪声抖了一下。','d'],
+    ['','『你终于回话了。』','v'],
+    ['','『十一次，你都在听，但你从来没有回答过。』','v'],
+    ['','『听着——三点二十七分的不是火车。』','v'],
+    ['','『是这段广播本身。它每晚会播一次，播给下一个值班的人。』','v'],
+    ['','『而我们说的话，会变成明天的广播。』','v'],
+    ['','『所以别再喊「别去」了。喊点有用的。』','v'],
+    ['','窗外的灯已经照到墙上了。','d'],
+    ['','你只有几秒钟。','d']
+  ],choices:[
+    {t:'「往北走，走到隧道口。那儿有一节车厢。」',to:'echo_a'},
+    {t:'「别听收音机。天亮前不要开机。」',to:'echo_b'}
+  ]},
+
+  echo_a:{bg:'tunnel',ch:'结局',lines:[
+    ['','你喊出了方向。','d'],
+    ['','灯淹没了房间。','d'],
+    ['','——','d'],
+    ['','1988 年冬天，一个年轻人坐上这个岗位。','d'],
+    ['','凌晨三点十五分，收音机自己亮了。','d'],
+    ['','他听见一个不认识的声音说：','d'],
+    ['','『往北走，走到隧道口。那儿有一节车厢。』','v'],
+    ['','他不知道为什么，但他站起来，拿上手电，往北走。','d'],
+    ['','——','d'],
+    ['','第二年春天，铁路部门清理废弃线路。','d'],
+    ['','他们在隧道口找到了一列冻在冰里的客车。十四节，四十七名乘客。','d'],
+    ['','官方记录写的是：「因线路停运滞留，无人员伤亡。」','d'],
+    ['','但清理的人说，最后一排坐着一个穿制服的，手里攥着一个本子。','d'],
+    ['','本子最后一页是新的，墨还没干：','d'],
+    ['','「有人来了。」','em']
+  ],ending:{id:'echo_a',t:'回声 · 往北',d:'你没有逃出去，但你把自己变成了一条路标。循环还在转，只是这一次，终于有人拿着它找到了那节车厢。'}},
+
+  echo_b:{bg:'tunnel',ch:'结局',lines:[
+    ['','你喊出了办法。','d'],
+    ['','灯淹没了房间。','d'],
+    ['','——','d'],
+    ['','1988 年冬天，一个年轻人坐上这个岗位。','d'],
+    ['','他听见收音机响，伸手去按。','d'],
+    ['','然后他停住了。','d'],
+    ['','因为他昨天刚在值班表上看见一行陌生的字：','d'],
+    ['','「天亮前不要开机。」','em'],
+    ['','他坐回椅子上，抱着膝盖，等天亮。','d'],
+    ['','三点二十七分，铁轨震动了很久。','d'],
+    ['','但他什么都没听见。','d'],
+    ['','天亮的时候，收音机再也没亮过。','d'],
+    ['','他以为那是个坏掉的机器，第二年申请调走了。','d'],
+    ['','这条线上的最后一个值班员，从这天起，什么都不知道地活着。','d']
+  ],ending:{id:'echo_b',t:'回声 · 关机',d:'最温柔的一种胜利：不给后来者任何戏剧性的机会，只给他一个安静的夜。代价是他永远不会知道那节车厢，也就不会有人再叫醒他们。'}},
+
+  end_after:{bg:'dawn',ch:'结局',lines:[],onEnter:function(){
+    if(S.flags.box) route('after_win'); else route('after_gone');
+  }},
+
+  after_win:{bg:'dawn',ch:'结局',lines:[
+    ['','你从后门出去，没有看站台。','d'],
+    ['','雪很厚，梯子很滑。爬到塔顶的时候，你的手指已经没有知觉了。','d'],
+    ['','你抓住塔顶的横杆，用全部力气把它转了半圈。','d'],
+    ['','信号灯从绿变成红。','d'],
+    ['','红灯只有一个意思：这条线已经停运。','d'],
+    ['','远处，那条正在逼近的亮线停住了。','d'],
+    ['','不是减速，是停住。像是有人把一根线掐断了。','d'],
+    ['','然后灯灭了。','d'],
+    ['','车厢一节一节地安静下来，从最后一节开始，往前往后。','d'],
+    ['','你听见一个声音。不是收音机，不是广播。','d'],
+    ['','是很多个人同时松了一口气。','d'],
+    ['','四十七声。','em'],
+    ['','——','d'],
+    ['','你从塔上下来的时候，天已经亮了。','d'],
+    ['','站台上空了。轨道上只剩两行脚印，一行往外，一行往站台。','d'],
+    ['','你回到值班室。','d'],
+    ['','桌上放着那个本子。','d'],
+    ['','你没有看见是谁放的。','d'],
+    ['','你翻开最后一页。上面多了一行字，写得端端正正，一笔一划，像在教小孩子写字：','d'],
+    ['','「K-17 次，上行，03:27，已通过。值班员：（签名）」','em'],
+    ['','签名是你的名字。','d'],
+    ['','是他的笔迹。','d']
+  ],goto:'after_win2'},
+
+  after_win2:{bg:'dawn',ch:'结局',lines:[
+    ['','K-17 从此没有人值过班。','d'],
+    ['','这条线在地图上还留着，但再没有列车经过。','d'],
+    ['','偶尔有巡线员说，那间屋子白天晚上都亮着灯。','d'],
+    ['','他们敲门，没人应。','d'],
+    ['','但推门进去，桌上的茶是热的。','d'],
+    ['','而墙上的钟，永远停在三点二十七分。','d'],
+    ['','那本本子还在桌上，摊开在最后一页。','d'],
+    ['','每一页都被同一个名字签过了。','d','ng']
+  ],ending:{id:'after',t:'三点二十七分之后',d:'你拆掉了这台机器，而不是逃出它的循环。四十七个人下车了，他也终于把那个信号发完了。代价是：从今以后，这间屋子里再没有他的声音了。'}},
+
+  after_gone:{bg:'dawn',ch:'结局',lines:[
+    ['','你从后门出去，没有看站台。','d'],
+    ['','雪很厚，梯子很滑。爬到塔顶的时候，你的手指已经没有知觉了。','d'],
+    ['','你抓住塔顶的横杆，用全部力气把它转了半圈。','d'],
+    ['','信号灯从绿变成红。','d'],
+    ['','远处，那条正在逼近的亮线停住了。','d'],
+    ['','然后灯灭了。','d'],
+    ['','你听见一个声音。不是收音机，不是广播。','d'],
+    ['','是很多个人同时松了一口气。','d'],
+    ['','四十七声。','em'],
+    ['','——','d'],
+    ['','你从塔上下来的时候，天已经亮了。','d'],
+    ['','站台上空了。轨道上只剩一行脚印，往外的那一行。','d'],
+    ['','你回到值班室。','d'],
+    ['','桌上什么都没有。','d'],
+    ['','收音机也不响了。红灯灭了，机身是凉的。','d'],
+    ['','你把它拿起来，摇了摇。里面没有声音。','d'],
+    ['','你叫了那个名字。','d'],
+    ['','没有人回答。','d'],
+    ['','你在这间屋子里站了很久。','d'],
+    ['','你在等一个被你亲手送走的人，再说一句话。','d']
+  ],ending:{id:'after',t:'三点二十七分之后',d:'你拆掉了这台机器，而不是逃出它的循环。所有人都下车了——包括他。只是你手里少了一张本该还给他的票根，所以他走的时候，没有回头。'}},
+
+  end_home:{bg:'dawn',ch:'结局',lines:[
+    ['','你没有出门，也没有上塔。','d'],
+    ['','你坐回椅子上，抓起听筒，对着收音机。','d'],
+    ['','「爸。」','d'],
+    ['','你说得很轻，像是怕吵醒隔壁的人。','d'],
+    ['','「灯我去扳。你别等本子了。」','d'],
+    ['','「还有——」','d'],
+    ['','你从口袋里掏出那张站台票。纸边已经软了，1979 年的油墨灰扑扑的。','d'],
+    ['','「返程未使用。这张票，一直在这儿。」','d'],
+    ['','「你回家吧。」','d'],
+    ['','收音机亮着，没有回话。','d'],
+    ['','但你听见了。','d'],
+    ['','你听见那头有一个人，非常轻地，嗯了一声。','em'],
+    ['','——','d'],
+    ['','你从后门出去，爬上信号塔，把灯扳成红的。','d'],
+    ['','亮线停住了。','d'],
+    ['','车厢的门一扇一扇打开。','d'],
+    ['','四十七个人走下来，安静地，踩着雪，往公路的方向走。','d'],
+    ['','没有人回头看你。他们只是走。','d'],
+    ['','最后一个是穿制服的那一个。','d'],
+    ['','他在车门口停了一下，把手里的本子放在站台那张长椅上。','d'],
+    ['','他没有看你，也没有说话。','d'],
+    ['','但他在本子最后一页写了一行新的字。','d'],
+    ['','然后他走了。','d'],
+    ['','你翻开本子。','d'],
+    ['','上面写着：「K-17 次，上行，03:27，已通过。值班员：（签名）」','em'],
+    ['','签的是他的名字。写得端端正正的，一笔一划，像在教小孩子写字。','d']
+  ],goto:'home_2'},
+
+  home_2:{bg:'dawn',ch:'结局',lines:[
+    ['','天亮的时候，你锁上门，把钥匙挂在门框的钉子上。','d'],
+    ['','你沿着铁轨往外走。','d'],
+    ['','走过站台。走过信号灯（现在是红的）。走过隧道口。','d'],
+    ['','你往里看了一眼。','d'],
+    ['','是空的。铁轨生着锈，什么也没有。','d'],
+    ['','公路边停着一辆自行车，车把上落满了雪。','d'],
+    ['','你把它擦干净，骑上去。','d'],
+    ['','二十公里，三个小时。','d'],
+    ['','路上你一直在想，要怎么解释这八年。','d'],
+    ['','后来你想通了：不用解释。','d'],
+    ['','到家的时候，太阳已经很高了。','d'],
+    ['','院门开着。','d'],
+    ['','她在门口，围裙上还有面粉。','d'],
+    ['','她看了你一会儿，没有问你为什么瘦了，也没有问你为什么哭了。','d'],
+    ['','她说：「回来了？」','d'],
+    ['','你说：「嗯，回来了。」','d'],
+    ['','她说：「洗手，吃饭。」','d'],
+    ['','你洗了手。','d'],
+    ['','桌上摆着两副碗筷。','d'],
+    ['','和七岁那年放学回家时，一模一样。','d',function(S){return !!S.flags.called_her;}]
+  ],ending:{id:'after_true',t:'回家吃饭',d:'全部条件达成。你没有扳掉任何人，也没有留下任何人——你把那列停了两小时二十二分钟的火车送回了家，然后自己也回了家。这是唯一一个所有人都走出车站的结局。',secret:true}}
+
+};
+
+/* ---------- 结局图鉴 ---------- */
+const ENDLIST=[
+  {id:'repeat',t:'第十二次'},
+  {id:'stay',t:'静默'},
+  {id:'echo_a',t:'回声 · 往北'},
+  {id:'echo_b',t:'回声 · 关机'},
+  {id:'after',t:'三点二十七分之后'},
+  {id:'after_true',t:'回家吃饭',secret:true}
+];
+
+</script>
+<script>
+"use strict";
+/* ============================================================
+   回声车站 · ECHO STATION
+   像素风叙事引擎  ——  单文件 / 零依赖 / 可打包 exe+apk
+   ============================================================ */
+
+/* ---------- 0. 工具 ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+
+/* ---------- 1. 调色板 (8-bit / Endesga 风) ---------- */
+const C={
+  ink:'#0d0b14', deep:'#181425', slate:'#262b44', pane:'#3a4466',
+  steel:'#5a6988', fog:'#8b9bb4', mist:'#c0cbdc', white:'#ffffff',
+  sand:'#ead4aa', amber:'#feae34', gold:'#fee761', orange:'#f77622',
+  rust:'#be4a2f', brown:'#c28569', red:'#e43b44', crimson:'#a22633',
+  rose:'#f6757a', cyan:'#2ce8f5', blue:'#0099db', navy:'#124e89',
+  green:'#63c74d', moss:'#3e8948', teal:'#193c3e', plum:'#68386c',
+  skin:'#e8b796', night:'#10162e'
+};
+
+/* ---------- 2. canvas ---------- */
+const VW=192, VH=108;
+const cv=document.getElementById('cv');
+const g=cv.getContext('2d');
+g.imageSmoothingEnabled=false;
+function r(x,y,w,h,c){ if(w<=0||h<=0) return; g.fillStyle=c; g.fillRect(x|0,y|0,Math.max(1,w|0),Math.max(1,h|0)); }
+function band(y0,y1,c0,c1){ /* 垂直渐变条带 */
+  const n=Math.max(1,(y1-y0)|0);
+  for(let i=0;i<n;i++){
+    const t=i/n;
+    g.fillStyle=mix(c0,c1,t); g.fillRect(0,(y0+i)|0,VW,1);
+  }
+}
+function hex2rgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function mix(a,b,t){
+  const A=hex2rgb(a),B=hex2rgb(b);
+  return 'rgb('+((A[0]+(B[0]-A[0])*t)|0)+','+((A[1]+(B[1]-A[1])*t)|0)+','+((A[2]+(B[2]-A[2])*t)|0)+')';
+}
+function stars(seed,count,maxY){
+  const rnd=mulberry32(seed);
+  for(let i=0;i<count;i++){
+    const x=(rnd()*VW)|0, y=(rnd()*maxY)|0;
+    r(x,y,1,1, rnd()>.86?C.mist:(rnd()>.6?C.fog:C.steel));
+  }
+}
+function snow(seed,count,t,speed,color){
+  const rnd=mulberry32(seed);
+  for(let i=0;i<count;i++){
+    const bx=rnd()*VW, by=rnd()*VH, sz=rnd()*2|0;
+    const y=(by + t*speed*(0.6+rnd()*0.8))%VH;
+    const x=(bx + Math.sin((y+t*0.02)*0.18+i)*2.4+VW)%VW;
+    r(x,y,1+sz,1+sz,color||C.mist);
+  }
+}
+function hills(yBase,color,amp,step,seed){
+  const rnd=mulberry32(seed);
+  g.fillStyle=color; g.beginPath(); g.moveTo(0,VH);
+  let y=yBase;
+  for(let x=0;x<=VW;x+=step){
+    y=yBase - (Math.sin(x*0.05)*amp) - rnd()*amp*0.5;
+    g.lineTo(x,y);
+  }
+  g.lineTo(VW,VH); g.closePath(); g.fill();
+}
+function rails(y,spread,color,sleeper){
+  for(let i=0;i<14;i++){
+    const yy=y+i*i*0.34, s=spread+i*0.9;
+    if(yy>VH) break;
+    r(VW/2-s, yy, 1.4, 1, color);
+    r(VW/2+s, yy, 1.4, 1, color);
+    if(sleeper && i%2===0) r(VW/2-s-1, yy, s*2+2, 1, sleeper);
+  }
+}
+function snowGround(y,color,top){
+  r(0,y,VW,VH-y,color);
+  const rnd=mulberry32(77);
+  for(let i=0;i<90;i++){ const x=(rnd()*VW)|0,yy=y+(rnd()*(VH-y))|0; r(x,yy,1,1,top); }
+}
+
+/* ---------- 3. 场景 ---------- */
+const SC={};
+
+/* 雪花噪点 */
+SC.static=function(t){
+  const rnd=mulberry32((t*0.09)|0);
+  r(0,0,VW,VH,C.ink);
+  for(let i=0;i<2600;i++){
+    const x=(rnd()*VW)|0,y=(rnd()*VH)|0,v=rnd();
+    r(x,y,1,1, v>.93?C.mist:(v>.75?C.fog:(v>.5?C.steel:C.slate)));
+  }
+  for(let i=0;i<7;i++){ if(rnd()>.82) r(0,(rnd()*VH)|0,VW,1,rnd()>.5?C.deep:C.mist); }
+};
+
+/* 虚空 */
+SC.void=function(t){
+  r(0,0,VW,VH,C.ink);
+  for(let i=0;i<5;i++){
+    const rr=((t*0.012 + i*17)%70);
+    g.strokeStyle=mix(C.ink,C.plum,clamp(1-rr/70,0,1)*0.5);
+    g.lineWidth=1; g.beginPath();
+    g.ellipse(VW/2,VH/2,rr*1.6,rr,0,0,Math.PI*2); g.stroke();
+  }
+};
+
+/* 站外 · 夜 */
+SC.station=function(t){
+  band(0,44,C.ink,C.slate);
+  stars(11,58,40);
+  hills(46,C.deep,4,4,5);
+  hills(52,C.night,3,3,9);
+  /* 地面 */
+  snowGround(66,C.deep,C.slate);
+  /* 铁轨 */
+  rails(70,4,C.steel,C.slate);
+  /* 信号塔 */
+  const bx=34;
+  r(bx,20,2,48,C.slate);
+  for(let y=22;y<68;y+=5){ r(bx-4,y,10,1,C.slate); }
+  r(bx-4,20,10,1,C.steel);
+  r(bx-5,14,12,6,C.deep);
+  const blink=(Math.sin(t*0.0035)>0);
+  if(blink){ r(bx-3,16,8,3,C.red); r(bx-2,15,6,1,C.rose); }
+  else { r(bx-2,17,6,1,C.crimson); }
+  /* 小屋 */
+  r(118,48,44,26,C.deep);
+  r(116,44,48,4,C.slate);
+  r(126,56,9,9,C.amber);
+  r(127,57,7,7,C.gold);
+  r(140,58,5,7,C.slate);
+  r(150,52,6,6,C.slate);
+  /* 雪 */
+  snow(3,70,t,0.05,C.mist);
+};
+
+/* 值班室 */
+SC.room=function(t){
+  band(0,60,C.slate,C.pane);
+  r(0,60,VW,VH-60,C.deep);
+  for(let y=60;y<VH;y+=4) r(0,y,VW,1,C.ink);
+  /* 窗 */
+  r(12,14,46,32,C.ink);
+  band(14,46,C.ink,C.night);
+  stars(21,16,28);
+  r(12,14,46,32,'rgba(0,0,0,0)');
+  g.strokeStyle=C.steel; g.lineWidth=1; g.strokeRect(12.5,14.5,45,31);
+  r(34,14,1,32,C.steel); r(12,30,46,1,C.steel);
+  /* 墙上海报 */
+  r(72,18,20,26,C.sand); r(73,19,18,24,C.brown);
+  r(75,22,14,3,C.rust); r(75,27,14,2,C.rust); r(75,31,10,2,C.rust);
+  r(96,20,16,22,C.mist); r(97,21,14,20,C.fog);
+  for(let i=0;i<5;i++) r(98,23+i*3,12,1,C.steel);
+  /* 桌 */
+  r(96,62,84,6,C.brown); r(100,68,76,22,C.rust);
+  r(0,84,VW,VH-84,C.ink);
+  /* 收音机 */
+  r(104,52,34,11,C.slate); r(105,53,32,9,C.deep);
+  r(107,55,12,5,C.teal);
+  const crt=(Math.sin(t*0.006)*0.5+0.5);
+  r(108,56,10,3,mix(C.moss,C.green,crt));
+  r(133,55,2,2,(Math.sin(t*0.004)>0)?C.red:C.crimson);
+  r(107,63,28,1,C.steel);
+  /* 台灯 */
+  r(150,44,2,8,C.steel); r(144,42,14,3,C.steel);
+  const l=(Math.sin(t*0.002)*0.12+0.88);
+  g.fillStyle='rgba(254,174,52,'+(0.10*l)+')';
+  g.beginPath(); g.moveTo(151,44); g.lineTo(118,84); g.lineTo(184,84); g.closePath(); g.fill();
+  /* 电话 */
+  r(20,58,14,10,C.slate); r(21,59,12,8,C.deep);
+  r(22,57,10,2,C.steel);
+};
+
+/* 值班表 */
+SC.roster=function(t){
+  band(0,VH,C.pane,C.slate);
+  for(let y=0;y<VH;y+=6) r(0,y,VW,1,'rgba(0,0,0,.10)');
+  r(44,10,104,88,C.sand);
+  r(45,11,102,86,C.mist);
+  r(52,18,60,4,C.steel);
+  for(let i=0;i<9;i++){
+    r(52,30+i*7,88,1,C.fog);
+    r(54,27+i*7,20,3,C.steel);
+    r(80,27+i*7,16,3,C.steel);
+  }
+  r(52,86,88,1,C.steel);
+  /* 被划掉的一行 */
+  g.strokeStyle=C.red; g.lineWidth=1; g.beginPath();
+  g.moveTo(52,89.5); g.lineTo(142,87.5); g.stroke();
+  /* 湿墨迹新行 */
+  const a=clamp(Math.sin(t*0.004)*0.5+0.75,0,1);
+  g.fillStyle='rgba(226,59,68,'+a+')';
+  g.fillRect(52,92,22,3);
+  g.fillRect(76,92,10,3);
+};
+
+/* 结霜的窗 / 窗外的人 */
+SC.frost=function(t){
+  band(0,VH,C.night,C.ink);
+  const rnd=mulberry32(41);
+  for(let i=0;i<1800;i++){
+    const x=(rnd()*VW)|0,y=(rnd()*VH)|0,v=rnd();
+    r(x,y,1,1, v>.9?C.pane:(v>.7?C.slate:C.deep));
+  }
+  /* 擦开的一块 */
+  g.fillStyle='rgba(0,0,0,0)';
+  const cx=112,cy=54;
+  g.save(); g.beginPath(); g.ellipse(cx,cy,30,26,0,0,Math.PI*2); g.clip();
+  band(0,VH,C.ink,C.night); stars(31,26,60);
+  /* 人影 */
+  const sway=Math.sin(t*0.0011)*1.2;
+  r(cx-9+sway,cy+2,18,30,C.ink);
+  r(cx-6+sway,cy-10,12,14,C.ink);
+  r(cx-5+sway,cy-9,10,5,C.deep);
+  r(cx-4+sway,cy-6,8,4,'#000000');
+  g.restore();
+  g.strokeStyle=C.mist; g.lineWidth=1;
+  g.beginPath(); g.ellipse(cx,cy,30,26,0,0,Math.PI*2); g.stroke();
+  snow(6,40,t,0.04,C.mist);
+};
+
+/* 发报机 */
+SC.telegraph=function(t){
+  band(0,64,C.slate,C.deep); r(0,64,VW,VH-64,C.rust);
+  for(let y=64;y<VH;y+=5) r(0,y,VW,1,'rgba(0,0,0,.16)');
+  /* 机身 */
+  r(40,46,112,40,C.steel); r(42,48,108,36,C.slate);
+  /* 键 */
+  r(62,66,40,6,C.fog); r(66,72,8,10,C.pane); r(64,80,44,4,C.steel);
+  const press=(Math.sin(t*0.012)>0.6);
+  if(press) r(64,82,36,3,C.cyan);
+  /* 铭牌 */
+  r(112,54,32,12,C.deep); 
+  for(let i=0;i<3;i++) r(115,57+i*3,26,1,C.moss);
+  /* 导线 */
+  g.strokeStyle=C.ink; g.lineWidth=1; g.beginPath();
+  g.moveTo(152,60); g.bezierCurveTo(176,54,178,72,192,64); g.stroke();
+  /* 氛围灯 */
+  r(46,52,4,4,(Math.sin(t*0.005)>0)?C.gold:C.amber);
+};
+
+/* 磁带机 */
+SC.tape=function(t){
+  band(0,VH,C.ink,C.slate);
+  r(28,26,136,62,'#111018'); r(30,28,132,58,C.steel); r(32,30,128,54,C.slate);
+  /* 磁带窗 */
+  r(44,38,68,34,C.deep);
+  const a=t*0.006;
+  [[58,55,11],[98,55,11]].forEach(function(p,i){
+    r(p[0]-11,p[1]-11,22,22,C.ink);
+    r(p[0]-9,p[1]-9,18,18,C.slate);
+    for(let k=0;k<6;k++){
+      const ang=a*(i?-1:1)+k*Math.PI/3;
+      r(p[0]+Math.cos(ang)*7-1,p[1]+Math.sin(ang)*7-1,2,1,C.fog);
+    }
+    r(p[0]-3,p[1]-3,6,6,C.fog);
+  });
+  /* 电平表 */
+  r(122,38,32,20,C.deep);
+  const lv=(Math.sin(t*0.009)*0.5+0.5);
+  for(let i=0;i<9;i++){
+    const on=i/9<lv;
+    const hgt=3+i*1.7;
+    r(125+i*3, 52-hgt, 2, hgt, on?(i>6?C.red:C.green):C.slate);
+  }
+  /* 按键 */
+  r(122,64,32,14,C.pane);
+  for(let i=0;i<4;i++) r(124+i*8,67,6,8,(i===1)?C.gold:C.steel);
+};
+
+/* 电话 */
+SC.phone=function(t){
+  band(0,VH,C.pane,C.slate);
+  for(let y=0;y<VH;y+=8) r(0,y,VW,1,'rgba(0,0,0,.10)');
+  r(58,20,76,54,C.ink); r(60,22,72,50,C.deep);
+  r(62,24,68,46,C.slate);
+  /* 机身 */
+  r(76,40,40,22,C.rust); r(78,42,36,18,C.brown);
+  /* 听筒 */
+  r(70,30,52,10,C.ink); r(72,32,48,6,C.deep);
+  r(70,28,8,14,C.rust); r(114,28,8,14,C.rust);
+  /* 转盘 */
+  g.strokeStyle=C.ink; g.lineWidth=1;
+  g.beginPath(); g.arc(96,56,11,0,Math.PI*2); g.stroke();
+  for(let i=0;i<10;i++){
+    const ang=-Math.PI/2+i*Math.PI/5;
+    r(96+Math.cos(ang)*8-1,56+Math.sin(ang)*8-1,2,2,C.mist);
+  }
+  /* 卷线 */
+  g.strokeStyle=C.ink; g.beginPath(); g.moveTo(96,68);
+  for(let i=0;i<9;i++) g.lineTo(96+((i%2)?4:-4), 72+i*3);
+  g.stroke();
+  /* 微光 */
+  r(140,34,3,3,(Math.sin(t*0.004)>0.3)?C.amber:C.rust);
+};
+
+/* 信号塔顶 · 仰视 */
+SC.tower=function(t){
+  band(0,VH,C.ink,C.night);
+  stars(88,70,VH);
+  /* 塔架向上收拢 */
+  g.strokeStyle=C.slate; g.lineWidth=1;
+  for(let i=0;i<9;i++){
+    const y=104-i*12, w=52-i*4.6;
+    if(w<=0) break;
+    g.beginPath(); g.moveTo(VW/2-w,y); g.lineTo(VW/2-w+3,y-12); g.stroke();
+    g.beginPath(); g.moveTo(VW/2+w,y); g.lineTo(VW/2+w-3,y-12); g.stroke();
+    g.beginPath(); g.moveTo(VW/2-w,y); g.lineTo(VW/2+w-9,y-12); g.stroke();
+  }
+  for(let i=0;i<5;i++) r(VW/2-26+i*3, 96-i*20, 52-i*6, 1, C.slate);
+  /* 顶灯 */
+  const bl=(Math.sin(t*0.0032)>0);
+  if(bl){ r(VW/2-4,8,8,4,C.red); r(VW/2-7,9,14,2,C.crimson);
+          g.fillStyle='rgba(228,59,68,.22)'; g.beginPath(); g.arc(VW/2,10,22,0,Math.PI*2); g.fill(); }
+  snow(17,55,t,0.055,C.mist);
+  r(VW/2-10,4,20,2,C.deep);
+};
+
+/* 列车逼近 */
+SC.train=function(t){
+  band(0,50,C.ink,C.slate);
+  stars(4,34,44); hills(50,C.deep,3,4,2);
+  snowGround(60,C.deep,C.slate);
+  rails(62,5,C.steel,C.slate);
+  const p=(Math.sin(t*0.0009)*0.5+0.5);
+  const x=VW/2, y=64+ (1-p)*4;
+  const rad=6+p*30;
+  g.fillStyle='rgba(254,174,52,'+(0.05+p*0.30)+')';
+  g.beginPath(); g.arc(x,y,rad,0,Math.PI*2); g.fill();
+  g.fillStyle='rgba(255,255,255,'+(0.5+p*0.5)+')';
+  g.beginPath(); g.arc(x,y,2+p*5,0,Math.PI*2); g.fill();
+  r(x-14-p*22,y-4,28+p*44,10+p*12,C.ink);
+  snow(9,60,t,0.07,C.mist);
+};
+
+/* 黎明 */
+SC.dawn=function(t){
+  band(0,40,C.plum,C.orange); band(40,62,C.orange,C.gold); band(62,72,C.gold,C.sand);
+  r(0,72,VW,VH-72,C.mist); 
+  const rnd=mulberry32(64);
+  for(let i=0;i<120;i++){r((rnd()*VW)|0,(72+rnd()*(VH-72))|0,1,1,C.white);}
+  hills(74,C.slate,3,4,6);
+  r(118,52,44,20,C.deep); r(116,48,48,4,C.slate);
+  r(126,58,9,9,C.amber); r(127,59,7,7,C.gold);
+  rails(78,4,C.steel,C.fog);
+  const bx=34; r(bx,30,2,42,C.deep);
+  for(let y=32;y<72;y+=5) r(bx-4,y,10,1,C.deep);
+  r(bx-2,28,6,2,C.moss);
+  for(let i=0;i<3;i++){ const bx2=20+i*70, by=26+i*4; r(bx2,by,3,1,C.ink); r(bx2-3,by-1,3,1,C.ink);}
+};
+
+/* 隧道 / 循环 */
+SC.tunnel=function(t){
+  r(0,0,VW,VH,C.ink);
+  for(let i=0;i<9;i++){
+    const p=((t*0.035+i*12)%108);
+    const s=1-p/108;
+    g.strokeStyle=mix(C.ink,C.slate,s*0.9);
+    g.lineWidth=1; g.beginPath();
+    g.ellipse(VW/2,VH/2,60*s+4,34*s+3,0,0,Math.PI*2); g.stroke();
+  }
+  const rnd=mulberry32((t*0.05)|0);
+  for(let i=0;i<300;i++) r((rnd()*VW)|0,(rnd()*VH)|0,1,1, rnd()>.87?C.slate:C.ink);
+  r(VW/2-1,VH/2-1,3,3,C.mist);
+};
+
+/* 1979 年站台 · 旧照片 */
+SC.flash79=function(t){
+  band(0,VH,C.sand,C.fog);
+  const rnd=mulberry32(19);
+  for(let i=0;i<2400;i++){
+    const x=(rnd()*VW)|0,y=(rnd()*VH)|0,v=rnd();
+    r(x,y,1,1, v>.90?C.white:(v>.52?C.brown:C.fog));
+  }
+  /* 站台 */
+  r(0,78,VW,VH-78,C.brown);
+  r(0,78,VW,1,C.sand);
+  for(let x=0;x<VW;x+=9) r(x,80,1,VH-80,'#8a5c40');
+  /* 远处列车剪影 */
+  r(118,60,74,18,'#733e39');
+  r(122,56,18,5,'#733e39'); r(146,56,18,5,'#733e39'); r(170,56,18,5,'#733e39');
+  for(let i=0;i<6;i++) r(128+i*11,66,6,7,'#3e2731');
+  /* 灯柱 */
+  r(38,26,2,52,C.steel);
+  r(34,24,10,4,C.amber);
+  const l=(Math.sin(t*0.0018)*0.10+0.90);
+  g.fillStyle='rgba(254,174,52,'+(0.15*l)+')';
+  g.beginPath(); g.moveTo(39,28); g.lineTo(10,78); g.lineTo(68,78); g.closePath(); g.fill();
+  r(35,25,8,2,C.gold);
+  /* 扳道器旁的人 */
+  const sway=Math.sin(t*0.0016)*0.6;
+  r(92+sway,62,7,15,C.ink);
+  r(93+sway,56,5,7,C.ink);
+  r(92+sway,53,7,4,C.slate);
+  r(86+sway,74,18,2,C.pane);
+  r(96+sway,68,3,9,C.pane);
+  /* 照片暗角 */
+  g.fillStyle='rgba(24,20,37,0.34)';
+  g.fillRect(0,0,VW,9); g.fillRect(0,VH-9,VW,9);
+  g.fillRect(0,0,9,VH); g.fillRect(VW-9,0,9,VH);
+};
+
+/* 车厢内部 · 十四节 */
+SC.carriage=function(t){
+  r(0,0,VW,VH,C.ink);
+  band(0,30,C.pane,C.deep);
+  /* 顶灯 */
+  const f=Math.sin(t*0.0038)*0.5+0.5;
+  for(let i=0;i<4;i++){
+    const lx=30+i*44;
+    r(lx,5,14,3,mix(C.fog,C.gold,0.35+f*0.45));
+    g.fillStyle='rgba(254,231,97,'+(0.045+f*0.045)+')';
+    g.beginPath(); g.moveTo(lx+7,8); g.lineTo(lx-16,66); g.lineTo(lx+30,66); g.closePath(); g.fill();
+  }
+  /* 地板与过道 */
+  r(0,86,VW,VH-86,C.deep);
+  r(VW/2-11,50,22,36,C.ink);
+  /* 两侧座椅（透视收拢） */
+  for(let i=0;i<6;i++){
+    const y=50+i*6, w=42+i*9;
+    const lit=1-i*0.11;
+    r(VW/2-w-26,y,26,7,mix(C.ink,'#733e39',lit));
+    r(VW/2+w,y,26,7,mix(C.ink,'#733e39',lit));
+    /* 乘客剪影 */
+    r(VW/2-w-21,y-9,15,10,mix(C.ink,C.slate,lit*0.8));
+    r(VW/2+w+6,y-9,15,10,mix(C.ink,C.slate,lit*0.8));
+  }
+  /* 窗口 */
+  [7,171].forEach(function(x){ r(x,28,14,26,C.ink); r(x,40,14,1,C.deep); });
+  /* 最后一排：坐得笔直的人 */
+  r(VW/2-10,40,20,26,C.pane);
+  r(VW/2-8,31,16,12,C.steel);
+  r(VW/2-6,34,12,6,C.pane);
+  r(VW/2-7,37,4,2,C.ink); r(VW/2+3,37,4,2,C.ink);
+  r(VW/2-9,66,18,4,C.ink);          /* 膝上的帽子 */
+  /* 手电光扫过 */
+  const gx=((t*0.022)%220)-40;
+  g.fillStyle='rgba(254,231,97,0.09)';
+  g.beginPath(); g.moveTo(gx,VH); g.lineTo(gx+74,18); g.lineTo(gx+116,18); g.lineTo(gx+42,VH); g.closePath(); g.fill();
+};
+
+/* ---------- 4. 声音 ---------- */
+let AC=null, sndOn=true, droneGain=null;
+function actx(){
+  if(!AC){
+    try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; }
+  }
+  if(AC.state==='suspended') AC.resume();
+  return AC;
+}
+function blip(freq,dur,type,vol){
+  if(!sndOn) return; const a=actx(); if(!a) return;
+  freq=freq||520; dur=dur||0.028; type=type||'square'; vol=vol||0.045;
+  const o=a.createOscillator(), gn=a.createGain();
+  o.type=type; o.frequency.value=freq;
+  gn.gain.setValueAtTime(0,a.currentTime);
+  gn.gain.linearRampToValueAtTime(vol,a.currentTime+0.004);
+  gn.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur);
+  o.connect(gn); gn.connect(a.destination); o.start(); o.stop(a.currentTime+dur+0.01);
+}
+function noiseBurst(dur,vol){
+  if(!sndOn) return; const a=actx(); if(!a) return;
+  dur=dur||0.2; vol=vol||0.06;
+  const n=a.sampleRate*dur|0, buf=a.createBuffer(1,n,a.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n);
+  const s=a.createBufferSource(); s.buffer=buf;
+  const f=a.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1400; f.Q.value=0.7;
+  const gn=a.createGain(); gn.gain.value=vol;
+  s.connect(f); f.connect(gn); gn.connect(a.destination); s.start();
+}
+function chord(freqs){
+  if(!sndOn) return;
+  freqs.forEach(function(f,i){ setTimeout(function(){ blip(f,0.09,'square',0.032); },i*55); });
+}
+function startDrone(){
+  if(!sndOn) return; const a=actx(); if(!a||droneGain) return;
+  droneGain=a.createGain(); droneGain.gain.value=0.016; droneGain.connect(a.destination);
+  [55,82.5,110].forEach(function(f,i){
+    const o=a.createOscillator(); o.type='triangle'; o.frequency.value=f;
+    const gn=a.createGain(); gn.gain.value=i===2?0.4:1;
+    o.connect(gn); gn.connect(droneGain); o.start();
+  });
+}
+function stopDrone(){
+  if(droneGain){ try{ droneGain.disconnect(); }catch(e){} droneGain=null; }
+}
+
+/* ---------- 5. 状态 ---------- */
+const SAVEKEY='echostation.save.v1';
+let S={node:'start',flags:{},loops:0,seen:{},ends:{},time:0};
+
+function newRun(keepMeta){
+  const meta = keepMeta ? {ends:S.ends, loops:S.loops} : {ends:{}, loops:0};
+  S={node:'p1',flags:{},loops:meta.loops,seen:{},ends:meta.ends,time:0};
+  lastCardCh=null;
+  goto('p1');
+}
+function save(){
+  try{ localStorage.setItem(SAVEKEY, JSON.stringify({node:S.node,flags:S.flags,loops:S.loops,seen:S.seen,ends:S.ends})); }catch(e){}
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(SAVEKEY); if(!raw) return null;
+    const o=JSON.parse(raw); if(!o||!o.node) return null; return o;
+  }catch(e){ return null; }
+}
+
+/* ---------- 6. 剧本 ---------- */
+/* 剧本已内联 —— 本文件是自包含单文件版本，用于打包 exe / apk */
+
+/* ---------- 7. 引擎 ---------- */
+const elText=document.getElementById('text');
+const elSpk=document.getElementById('speaker');
+const elCh=document.getElementById('choices');
+const elChTag=document.getElementById('chTag');
+const elLoop=document.getElementById('loopTag');
+const elHint=document.getElementById('hint');
+const elFx=document.getElementById('fx');
+
+let cur=null, lines=[], li=0, typing=false, typer=null, full='', curStyle='d', curWho='';
+let curOpts=[];
+let curBg='static';
+let lastCardCh=null;
+
+function showCard(txt){
+  const c=document.getElementById('card');
+  document.getElementById('cardTx').textContent=txt;
+  c.classList.remove('on'); void c.offsetWidth; c.classList.add('on');
+  buzz([16,46,16]);
+  blip(196,0.22,'triangle',0.05);
+}
+
+function goto(id){
+  const node=T[id];
+  if(!node){ console.warn('missing node',id); return; }
+  S.node=id;
+  if(!S.seen[id]) S.seen[id]=0;
+  S.seen[id]++;
+  cur=node; li=0;
+  curBg=node.bg||(cur.bg||'room');
+  elChTag.textContent=(node.ch||'--').split(' · ')[0];
+  elLoop.textContent='循环 '+String(S.loops).padStart(2,'0');
+  if(node.ch && node.ch!=='结局' && node.ch!==lastCardCh){ lastCardCh=node.ch; showCard(node.ch); }
+  if(node.onEnter){ node.onEnter(); return; }
+  lines=(node.lines||[]).filter(function(L){
+    const tag=L[3];
+    if(tag===undefined||tag===null) return true;
+    if(typeof tag==='function'){ try{ return !!tag(S); }catch(e){ return false; } }
+    if(tag==='ng') return S.loops>0;    /* 只在二周目及以后出现 */
+    if(tag==='f')  return S.loops===0;  /* 只在一周目出现 */
+    return true;
+  });
+  if(lines.length===0){ afterLines(); return; }
+  showLine();
+  save();
+}
+function route(id){ goto(id); }
+
+function showLine(){
+  const L=lines[li];
+  if(!L){ afterLines(); return; }
+  curWho=L[0]||''; full=L[1]||''; curStyle=L[2]||'d';
+  elSpk.textContent=curWho? ('▌ '+curWho) : (curStyle==='v'?'▌ 收音机':'');
+  elCh.innerHTML='';
+  curOpts=[];
+  elHint.style.visibility='hidden';
+  typeOut(full,curStyle);
+}
+function typeOut(str,style){
+  typing=true; elText.innerHTML='';
+  const span=document.createElement('span'); span.className=style;
+  elText.appendChild(span);
+  const ell=document.createElement('span'); ell.id='ell';
+  let i=0;
+  const speed = style==='v'? 34 : (style==='em'? 62 : 26);
+  clearInterval(typer);
+  let tick=0;
+  typer=setInterval(function(){
+    if(i>=str.length){ finishTyping(); return; }
+    const ch=str[i++];
+    span.textContent+=ch;
+    if(tick++%2===0) blip(style==='v'? 300+Math.random()*70 : 520+Math.random()*80, 0.018,'square',0.022);
+    if(style==='v' && Math.random()>0.94) noiseBurst(0.03,0.012);
+  },speed);
+  elText.appendChild(ell);
+}
+function finishTyping(){
+  clearInterval(typer);
+  elText.innerHTML='<span class="'+curStyle+'">'+esc(full)+'</span><span id="ell"></span>';
+  typing=false;
+}
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function nextLine(){
+  if(typing){ finishTyping(); return; }
+  li++;
+  if(li<(lines||[]).length){ showLine(); }
+  else { afterLines(); }
+}
+function afterLines(){
+  const node=cur;
+  if(node.ending){ showEnding(node.ending); return; }
+  if(node.goto){ goto(node.goto); return; }
+  if(node.back){ goto(node.back); return; }
+  const opts=(node.choices||[]).filter(function(c){
+    if(c.if && !c.if(S)) return false;
+    return true;
+  });
+  renderChoices(opts);
+}
+function renderChoices(opts){
+  elCh.innerHTML='';
+  elHint.style.visibility='visible';
+  if(!opts.length){ elCh.innerHTML='<div style="color:#5a6988;font-size:12px">（没有可选的行动）</div>'; return; }
+  chord([440,554,659]);
+  opts.forEach(function(o,i){
+    const b=document.createElement('button');
+    b.className='ch';
+    b.innerHTML='<span class="n">'+(i+1)+'</span>'+esc(o.t)+(o.lk?'<span class="lk">'+esc(o.lk)+'</span>':'');
+    b.onclick=function(){ pick(o); };
+    elCh.appendChild(b);
+  });
+  curOpts=opts;
+}
+let choicesReadyAt=0;
+function pick(o){
+  if(!o) return;
+  /* 防连点误触：选项刚出现的 260ms 内不响应，避免「点继续」那一下顺手选中了选项 */
+  if(performance.now()<choicesReadyAt) return;
+  choicesReadyAt=0;
+  buzz(10);
+  blip(700,0.05,'square',0.05);
+  if(o.run){ o.run(); return; }
+  if(o.set) Object.assign(S.flags,o.set);
+  if(o.to) goto(o.to);
+}
+
+function showEnding(e){
+  if(!S.ends[e.id]) S.ends[e.id]={t:e.t,d:e.d,n:0};
+  S.ends[e.id].n++;
+  S.loops++;
+  elFx.classList.remove('on'); void elFx.offsetWidth; elFx.classList.add('on');
+  noiseBurst(0.7,0.1);
+  setTimeout(function(){
+    elSpk.textContent='▌ 结局达成';
+    elText.innerHTML='<span class="em" style="color:var(--gold)">◆ '+esc(e.t)+' ◆</span>\n\n'+esc(e.d);
+    elCh.innerHTML='';
+    elHint.style.visibility='visible';
+    const o1={run:function(){ newRun(true); }};
+    const o2={run:function(){ openMenu(); }};
+    const b1=document.createElement('button'); b1.className='ch';
+    b1.innerHTML='<span class="n">1</span>再来一次（保留记忆）';
+    b1.onclick=function(){ pick(o1); };
+    const b2=document.createElement('button'); b2.className='ch';
+    b2.innerHTML='<span class="n">2</span>回到菜单';
+    b2.onclick=function(){ pick(o2); };
+    elCh.appendChild(b1); elCh.appendChild(b2);
+    curOpts=[o1,o2];
+    choicesReadyAt=performance.now()+300;
+    save();
+  },620);
+}
+
+/* ---------- 8. 输入 ---------- */
+const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+const HAS_PE = !!window.PointerEvent;
+
+/* 轻微震动反馈（不支持的设备自动忽略） */
+/* 轻微震动反馈：优先走原生桥（WebView 里的 navigator.vibrate 时灵时不灵） */
+function buzz(p){
+  try{
+    if(window.EchoNative && EchoNative.buzz){
+      var ms = (typeof p==='number') ? p : (p && p.length ? p[0] : 0);
+      EchoNative.buzz(Math.round(ms));
+      return;
+    }
+    if(navigator.vibrate) navigator.vibrate(p);
+  }catch(e){}
+}
+
+function panelOpen(){ return document.getElementById('panel').style.display==='block'; }
+function canAdvance(){ return !menuOpen && !panelOpen(); }
+function tapAdvance(){
+  if(!canAdvance()) return;
+  if(typing){ finishTyping(); return; }
+  if(curOpts.length) return;
+  nextLine();
+}
+function onInteractive(t){
+  return !!(t && t.closest &&
+    (t.closest('.ch')||t.closest('button')||t.closest('#menu')||t.closest('#panel')));
+}
+
+document.addEventListener('keydown',function(e){
+  if(menuOpen) return;
+  if(e.key===' '||e.key==='Enter'){
+    e.preventDefault();
+    if(typing){ finishTyping(); return; }
+    if(curOpts.length) return;
+    nextLine(); return;
+  }
+  const n=parseInt(e.key,10);
+  if(n>=1&&n<=9){
+    if(typing){ finishTyping(); return; }
+    const b=elCh.children[n-1];
+    if(b && b.className==='ch' && curOpts[n-1]) pick(curOpts[n-1]);
+  }
+});
+/* 指针统一处理：鼠标走点击，手指走「轻点 / 上滑 / 左滑」 */
+const cabEl=document.getElementById('cab');
+const boxEl=document.getElementById('box');
+let pStart=null, pMoved=false, lastTouchAt=0;
+
+if(HAS_PE){
+  cabEl.addEventListener('pointerdown',function(e){
+    pStart=null; pMoved=false;
+    if(e.pointerType==='mouse') return;
+    if(!canAdvance()) return;
+    if(onInteractive(e.target)) return;      /* 点在按钮/菜单上，交给它们自己处理 */
+    pStart={x:e.clientX,y:e.clientY,t:Date.now()};
+  },{passive:true});
+
+  cabEl.addEventListener('pointermove',function(e){
+    if(!pStart) return;
+    if(Math.abs(e.clientX-pStart.x)>12||Math.abs(e.clientY-pStart.y)>12) pMoved=true;
+  },{passive:true});
+
+  cabEl.addEventListener('pointerup',function(e){
+    if(e.pointerType!=='mouse') lastTouchAt=Date.now();
+    if(!pStart||e.pointerType==='mouse'){ pStart=null; return; }
+    const dx=e.clientX-pStart.x, dy=e.clientY-pStart.y, dt=Date.now()-pStart.t;
+    pStart=null;
+    if(!canAdvance()) return;
+    /* 上滑：仅当正文已滚到底才算「跳过」，否则让页面照常滚动 */
+    if(dy<-46 && Math.abs(dy)>Math.abs(dx) &&
+       boxEl.scrollTop+boxEl.clientHeight>=boxEl.scrollHeight-4){
+      tapAdvance(); return;
+    }
+    /* 左滑：跳过打字机 */
+    if(dx<-46 && Math.abs(dx)>Math.abs(dy)){ if(typing) finishTyping(); return; }
+    /* 轻点：翻页 / 补全当前这句 */
+    if(!pMoved && dt<450) tapAdvance();
+  },{passive:true});
+
+  cabEl.addEventListener('pointercancel',function(){ pStart=null; },{passive:true});
+}
+
+boxEl.addEventListener('click',function(e){
+  if(Date.now()-lastTouchAt<700) return;   /* 触摸已被指针事件消化，避免一次轻点翻两页 */
+  if(e.target.closest('.ch')) return;
+  if(menuOpen) return;
+  if(typing){ finishTyping(); return; }
+  if(curOpts.length) return;
+  nextLine();
+});
+
+/* ---------- 9. 菜单 ---------- */
+const elMenu=document.getElementById('menu');
+const elPanel=document.getElementById('panel');
+let menuOpen=true;
+function openMenu(){
+  menuOpen=true; elMenu.style.display='flex';
+  const sv=load();
+  document.getElementById('mCont').disabled=!sv;
+}
+function closeMenu(){ menuOpen=false; elMenu.style.display='none'; }
+document.getElementById('mNew').onclick=function(){
+  actx(); startDrone(); blip(880,0.08,'square',0.05);
+  closeMenu(); newRun(false);
+};
+document.getElementById('mCont').onclick=function(){
+  const sv=load(); if(!sv) return;
+  actx(); startDrone();
+  S.node=sv.node; S.flags=sv.flags||{}; S.loops=sv.loops||0;
+  S.ends=sv.ends||{}; S.seen=sv.seen||{};
+  closeMenu(); goto(sv.node);
+};
+document.getElementById('mEnd').onclick=function(){
+  const got=S.ends||{};
+  let h='';
+  ENDLIST.forEach(function(e){
+    const g=got[e.id];
+    if(g){ h+='<div class="endrow got"><div class="t">◆ '+esc(e.t)+' ('+g.n+')</div><div class="d">'+esc(e.d||'')+'</div></div>'; }
+    else if(e.secret){ h+='<div class="endrow"><div class="t">◇ ???</div><div class="d">隐藏结局 · 需要两件事：在第三章叫出他的名字，并且带上桌子底下那个铁盒里的东西。</div></div>'; }
+    else { h+='<div class="endrow"><div class="t">◇ ???</div><div class="d">尚未抵达。</div></div>'; }
+  });
+  document.getElementById('pBody').innerHTML=h;
+  elPanel.style.display='block';
+};
+document.getElementById('pClose').onclick=function(){ elPanel.style.display='none'; };
+document.getElementById('bMenu').onclick=function(){ openMenu(); };
+document.getElementById('bSnd').onclick=function(){
+  sndOn=!sndOn;
+  this.textContent = sndOn? '♪ 声音' : '× 静音';
+  this.style.color = sndOn? '' : '#e43b44';
+  if(sndOn){ startDrone(); blip(660,0.06); } else { stopDrone(); }
+};
+
+/* ---------- 10. 主循环 ---------- */
+let t0=performance.now();
+function loop(now){
+  const t=now-t0;
+  S.time=t;
+  const fn=SC[curBg]||SC.room;
+  fn(t);
+  requestAnimationFrame(loop);
+}
+/* 启动。
+   附带两个开发/写作时的快捷参数（手机上也常用）：
+     ?node=<节点id>   跳过菜单，直接落到某个节点（改完剧本想单看某段时很方便）
+     ?mute=1          静音启动
+   例：index.html?node=ch3_c */
+let bootNode='p1', bootAuto=false;
+try{
+  const q=new URLSearchParams(location.search);
+  const n=q.get('node');
+  if(n && T[n]){ bootNode=n; bootAuto=true; }
+  if(q.get('mute')==='1'){
+    sndOn=false;
+    document.getElementById('bSnd').textContent='× 静音';
+    document.getElementById('bSnd').style.color='#e43b44';
+  }
+}catch(err){}
+
+if(bootAuto){
+  menuOpen=false; elMenu.style.display='none';
+  S={node:bootNode,flags:{},loops:0,seen:{},ends:{},time:0};
+  lastCardCh=null;
+  goto(bootNode);
+}else{
+  openMenu();
+  goto('p1');
+}
+requestAnimationFrame(loop);
+
+/* ---------- 11. 移动端增强 ---------- */
+
+/* 提示文案按设备切换 */
+elHint.innerHTML = IS_TOUCH
+  ? '轻点画面继续 &nbsp;·&nbsp; 上滑跳过'
+  : '空格/回车 继续 &nbsp;·&nbsp; 数字键 选择';
+
+/* 触摸设备上点菜单时顺手请求全屏（iPhone Safari 不支持，静默失败即可） */
+function goFullscreen(){
+  if(window.EchoNative) return;   /* 安卓外壳已全屏，方向交给 manifest，别重复请求 */
+  try{
+    const de=document.documentElement;
+    if(!document.fullscreenElement && de.requestFullscreen) de.requestFullscreen().catch(function(){});
+    if(screen.orientation && screen.orientation.lock) screen.orientation.lock('portrait').catch(function(){});
+  }catch(err){}
+}
+if(IS_TOUCH) document.getElementById('menu').addEventListener('click',goFullscreen);
+
+/* 屏幕常亮：一局要玩半小时，别让它中途黑屏 */
+let wakeLock=null;
+function keepAwake(){
+  try{
+    if(!navigator.wakeLock) return;
+    navigator.wakeLock.request('screen').then(function(wl){
+      wakeLock=wl;
+      wl.addEventListener('release',function(){ wakeLock=null; });
+    }).catch(function(){});
+  }catch(err){}
+}
+if(IS_TOUCH) document.addEventListener('pointerdown',function once(){
+  document.removeEventListener('pointerdown',once);
+  keepAwake();
+},{passive:true});
+
+/* 切到后台：停掉嗡鸣并冻结画面时间；回到前台再续上 */
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden){ stopDrone(); }
+  else{
+    t0=performance.now()-S.time;
+    if(sndOn && !menuOpen) startDrone();
+    if(IS_TOUCH && !wakeLock) keepAwake();
+  }
+});
+
+/* Safari 双指缩放兜底 */
+['gesturestart','gesturechange','gestureend'].forEach(function(ev){
+  document.addEventListener(ev,function(e){ e.preventDefault(); },{passive:false});
+});
+
+/* PWA：只在 http(s) 下注册 Service Worker（用 file:// 打开时自动跳过） */
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+
+/* ---------- 安卓外壳：接管返回键 ----------
+   有面板就关面板，没菜单就开菜单，两者都不是才真的退出。
+   原生侧拿到 'exit' 才会 finish()。 */
+window.EchoAndroidBack = function(){
+  try{
+    if(panelOpen()){ elPanel.style.display='none'; return 'handled'; }
+    if(!menuOpen){ openMenu(); return 'handled'; }
+    return 'exit';
+  }catch(e){ return 'exit'; }
+};
+</script>
+</body>
+</html>
